@@ -1,0 +1,54 @@
+{
+  "desktopBase": "2.9.24",
+  "configurationSource": "3.9.1",
+  "files": [
+    {
+      "file": "packages/app/src/scripts/automation/wk/cx.ts",
+      "url": "https://github.com/ocsjs/ocs-desktop/blob/v3.9.1/packages/app/src/scripts/automation/wk/cx.ts",
+      "sha256": "619d81307cd84aaf0d541d89035e7d274f27fc80a8702d64e2dfdb95f933369b"
+    },
+    {
+      "file": "packages/app/src/scripts/automation/wk/zhs.ts",
+      "url": "https://github.com/ocsjs/ocs-desktop/blob/v3.9.1/packages/app/src/scripts/automation/wk/zhs.ts",
+      "sha256": "7b9266aad318f63fe74b1242a88c1f11c868ff4a26d467f016b6cc6457d68b72"
+    },
+    {
+      "file": "packages/app/src/scripts/automation/wk/icve.ts",
+      "url": "https://github.com/ocsjs/ocs-desktop/blob/v3.9.1/packages/app/src/scripts/automation/wk/icve.ts",
+      "sha256": "ce1620524f666d71b4e5e25341c973476c15eb6d96f0f290e8b3ec03bfe77a34"
+    },
+    {
+      "file": "packages/app/src/scripts/automation/wk/zjy.ts",
+      "url": "https://github.com/ocsjs/ocs-desktop/blob/v3.9.1/packages/app/src/scripts/automation/wk/zjy.ts",
+      "sha256": "514d5d209587a8d0dba820fbe6fc8f89043d7b3458a1e7e275a99c77acefb49d"
+    },
+    {
+      "file": "packages/app/src/scripts/automation/wk/icourse.ts",
+      "url": "https://github.com/ocsjs/ocs-desktop/blob/v3.9.1/packages/app/src/scripts/automation/wk/icourse.ts",
+      "sha256": "e2818fa02a2940484ee7acf69003119dcb1a41f2301fe5682f04a9b6816c0a01"
+    },
+    {
+      "file": "packages/app/src/scripts/automation/common/index.ts",
+      "url": "https://github.com/ocsjs/ocs-desktop/blob/v3.9.1/packages/app/src/scripts/automation/common/index.ts",
+      "sha256": "8bf51240c079adb09cb5f2722e7d1e95fe6ab8eab68c4abed6189f7e1b447d68"
+    },
+    {
+      "file": "packages/app/src/scripts/utils/index.ts",
+      "url": "https://github.com/ocsjs/ocs-desktop/blob/v3.9.1/packages/app/src/scripts/utils/index.ts",
+      "sha256": "c1dcf900e9475bdaa1f1bb61951924c225ff0336593901f5533a70e2a8f0861e"
+    }
+  ],
+  "captchaPort": {
+    "source": "https://github.com/ocsjs/ocs-desktop/blob/v3.9.1/packages/app/src/scripts/automation/wk/zhs.ts",
+    "sourceSha256": "7b9266aad318f63fe74b1242a88c1f11c868ff4a26d467f016b6cc6457d68b72",
+    "functions": [
+      "loopVerify",
+      "isYidunPopupVisible",
+      "verify",
+      "servoDrag",
+      "readPieceRenderLeft",
+      "isNotVerified"
+    ],
+    "changes": "TypeScript annotations and imports only; existing login flow calls the official loopVerify."
+  }
+}

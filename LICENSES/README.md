@@ -1,0 +1,1 @@
+原创融合代码采用根目录 MIT 许可。OCS 部分保留上游 enncy 版权，许可依据为 ocsjs/ocs-desktop 的 package.json（MIT）与官方 OCS 网页脚本头部。OCS-MIT.txt 重列 MIT 标准条款，不代表上游仓库含有同名文件。第三方库、字体与图片不自动改用本项目许可；相应资料随来源组件保留。星蝉受保护组件、原生前端、派生 HTML/CSS/app.js 和私有二维码不在公开仓库或公开更新包中。

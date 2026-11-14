@@ -1,0 +1,21 @@
+{
+  "source": "https://cdn.ocsjs.com/ocs.user.js",
+  "sha256": "788f84461938413e52caa83a2286abee08187d5e492b7e4d3db412540bc9f9df",
+  "metadata": {
+    "name": "OCS 网课助手",
+    "version": "5.4.0",
+    "description": "OCS(online-course-script) 网课助手，官网 https://docs.ocsjs.com ，专注于帮助大学生从网课中释放出来 让自己的时间把握在自己的手中，拥有人性化的操作页面，流畅的步骤提示，支持  【超星学习通】 【知到智慧树】 【职教云】 【智慧职教】 【中国大学MOOC】 【雨课堂】 等网课的学习，作业。具体的功能请查看脚本悬浮窗中的教程页面。",
+    "license": "MIT",
+    "authors": [
+      {
+        "name": "enncy",
+        "url": ""
+      }
+    ]
+  },
+  "upstreamVersion": "5.4.0",
+  "upstreamSource": "https://github.com/ocsjs/ocsjs/releases/download/5.4.0/ocs.user.js",
+  "upstreamSha256": "3aa9cf73a557647302ba04ac4715969c464cba83d9f85294e1e1421e6bcbf810",
+  "upstreamCommit": "1e93399a22b54fac80bb6bae131a4b208b5d8af9",
+  "fusionRevision": "2.5.7-enhancement.2"
+}

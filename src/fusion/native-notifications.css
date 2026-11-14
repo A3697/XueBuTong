@@ -1,0 +1,8 @@
+/* Arco keeps its own levels, content and controls; only finished notices get a timer. */
+.arco-message:has(.fusion-native-notice-countdown),
+.arco-notification:has(.fusion-native-notice-countdown){position:relative;overflow:hidden;padding-bottom:17px}
+.fusion-native-notice-countdown{position:absolute;left:0;bottom:0;width:100%;height:3px;pointer-events:none;background:#165dff;transform-origin:left center;animation:fusion-native-notice-countdown 5s linear forwards}
+.arco-message-success .fusion-native-notice-countdown,.arco-notification-success .fusion-native-notice-countdown{background:#00b42a}
+.arco-message-warning .fusion-native-notice-countdown,.arco-notification-warning .fusion-native-notice-countdown{background:#ff7d00}
+.arco-message-error .fusion-native-notice-countdown,.arco-notification-error .fusion-native-notice-countdown{background:#f53f3f}
+@keyframes fusion-native-notice-countdown{from{transform:scaleX(1)}to{transform:scaleX(0)}}

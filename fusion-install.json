@@ -1,0 +1,14 @@
+{
+  "product": "ocs-xingchan-fusion",
+  "version": "2.5.10",
+  "build": "20261114-github-updates",
+  "includesPersonalData": false,
+  "dependencies": {
+    "ocs": "2.9.24",
+    "xingchan": "1.3.0",
+    "ocsScript": "5.4.0"
+  },
+  "distribution": "sanitized",
+  "privacyPolicyVersion": 1,
+  "productName": "学不通"
+}

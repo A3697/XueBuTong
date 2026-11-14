@@ -1,0 +1,57 @@
+[
+  {
+    "package": "opencv-python-headless",
+    "version": "4.13.0.92",
+    "url": "https://files.pythonhosted.org/packages/4a/90/b338326131ccb2aaa3c2c85d00f41822c0050139a4bfe723cfd95455bd2d/opencv_python_headless-4.13.0.92-cp37-abi3-win_amd64.whl",
+    "sha256": "77a82fe35ddcec0f62c15f2ba8a12ecc2ed4207c17b0902c7a3151ae29f37fb6",
+    "bytes": 40070414
+  },
+  {
+    "package": "ddddocr",
+    "version": "1.6.0",
+    "url": "https://files.pythonhosted.org/packages/f4/c0/03f662be0c3bffbd13ac244e7de79bd5ac87cd88dad56305137d387f3781/ddddocr-1.6.0-py3-none-any.whl",
+    "sha256": "5571dc3e19c63bbcd2961c81301e6cbddd880d6bdab804057e5b862274e04a7b",
+    "bytes": 75991367
+  },
+  {
+    "package": "numpy",
+    "version": "2.4.4",
+    "url": "https://files.pythonhosted.org/packages/fa/22/4cc31a62a6c7b74a8730e31a4274c5dc80e005751e277a2ce38e675e4923/numpy-2.4.4-cp314-cp314-win_amd64.whl",
+    "sha256": "715d1c092715954784bc79e1174fc2a90093dc4dc84ea15eb14dad8abdcdeb74",
+    "bytes": 12449181,
+    "missingModules": [
+      "numpy/conftest.py",
+      "numpy/_configtool.py",
+      "numpy/core/arrayprint.py",
+      "numpy/core/defchararray.py",
+      "numpy/core/einsumfunc.py",
+      "numpy/core/fromnumeric.py",
+      "numpy/core/function_base.py",
+      "numpy/core/getlimits.py",
+      "numpy/core/multiarray.py",
+      "numpy/core/numeric.py",
+      "numpy/core/numerictypes.py",
+      "numpy/core/overrides.py",
+      "numpy/core/records.py",
+      "numpy/core/shape_base.py",
+      "numpy/core/umath.py",
+      "numpy/core/_dtype.py",
+      "numpy/core/_dtype_ctypes.py",
+      "numpy/core/_internal.py",
+      "numpy/core/_multiarray_umath.py",
+      "numpy/doc/ufuncs.py",
+      "numpy/f2py/_src_pyf.py",
+      "numpy/f2py/__main__.py",
+      "numpy/lib/user_array.py",
+      "numpy/lib/_user_array_impl.py",
+      "numpy/ma/testutils.py",
+      "numpy/testing/print_coercion_tables.py",
+      "numpy/typing/mypy_plugin.py",
+      "numpy/_core/cversions.py",
+      "numpy/_pyinstaller/hook-numpy.py",
+      "numpy/_pyinstaller/__init__.py",
+      "numpy/_typing/_extended_precision.py",
+      "numpy/_utils/_pep440.py"
+    ]
+  }
+]

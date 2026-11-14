@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.log
+*.ocsdata
+.env
+node_modules/
+ocs-profile/
+bridge-data/
+instances/
+private/
+evidence/
+lab-logs/
