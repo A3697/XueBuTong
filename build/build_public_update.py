@@ -196,7 +196,8 @@ end;
   if not CheckUpdateFile('fusion-install.json', '{baseline_hash}', '{current['fusion-install.json']['sha256']}') or
      not CheckUpdateFile('star-runtime\\_backend-prepared-manifest.json', '{backend_hash}', '{backend_hash}') then begin Result := '当前安装不属于此增量包支持的版本。'; Exit; end;
 {chr(10).join(guards)}
-  UpdateBackup := AddBackslash(WizardDirValue) + 'updates\\backup-{version}-' + GetDateTimeString('yyyymmdd-hhnnss-zzz', '', '');
+  Log('Compatible update verified; preparing changed-file backup.');
+  UpdateBackup := AddBackslash(WizardDirValue) + 'updates\\backup-{version}-' + GetDateTimeString('yyyymmdd-hhnnss-zzz', #0, #0);
   try
     if not UpdatePathSafe(UpdateBackup) then RaiseException('更新目录不能是链接');
     if not ForceDirectories(UpdateBackup) then RaiseException('无法创建更新备份目录');
