@@ -18,7 +18,7 @@
   const body=el('div','fusion-provider-config'),tabs=el('div','fusion-provider-tabs'),content=el('div','fusion-provider-content'),note=el('p','xc-poc-note','在此处新增、修改或移除后，点击“确定”统一保存；“取消”保留原配置。');
   tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','题库类型');body.append(tabs,note,content);
   const pages=new Map(),tabButtons=new Map();let child=null,soutiTimer=null,soutiBusy=false,soutiState=null;
-  for(const [key,label]of [['banks','普通题库'],['ai','AI'],['universal','万能题库'],['soutijiang','大学搜题酱']]){
+  for(const [key,label]of [['banks','普通题库'],['soutijiang','大学搜题酱'],['ai','AI'],['universal','万能题库']]){
    const page=el('section','fusion-provider-page'),control=button(label,()=>select(key));page.id='fusion-provider-'+key;page.setAttribute('role','tabpanel');control.setAttribute('role','tab');control.setAttribute('aria-controls',page.id);tabs.append(control);content.append(page);pages.set(key,page);tabButtons.set(key,control);
   }
   function select(key){tab=pages.has(key)?key:'banks';for(const [id,page]of pages){page.hidden=id!==tab;const control=tabButtons.get(id);control.setAttribute('aria-selected',String(id===tab));control.tabIndex=id===tab?0:-1;}if(tab==='soutijiang')void refreshSouti();else clearTimeout(soutiTimer);}

@@ -22,7 +22,7 @@ app.on('browser-window-created',(_event,win)=>{
   win.setIcon(icon);
   if(process.platform==='win32')win.setAppDetails({appId:'XueBuTong.Desktop',appIconPath:icon,appIconIndex:0,relaunchCommand:'"'+path.join(lab,'学不通.exe')+'"',relaunchDisplayName:'学不通'});
 });
-for(const name of ['ocs-profile','private','evidence','lab-logs','bridge-data','instances'])fs.mkdirSync(path.join(lab,name),{recursive:true});
+for(const name of ['ocs-profile','ocs-profile/session','private','evidence','lab-logs','bridge-data','instances'])fs.mkdirSync(path.join(lab,name),{recursive:true});
 const publicRootUrl=require('node:url').pathToFileURL(path.join(lab,'ocs-lab','resources','app','public')+path.sep).href;
 // Existing configurations are read once by the native store; never rewrite them here.
 const configFile=path.join(lab,'ocs-profile','config.json');
@@ -153,11 +153,13 @@ const pluginAction=async(method,input)=>{
  native.store.set('render',native.store.store.app.data_encryption?safeStorage.encryptString(JSON.stringify(current)).toString('base64'):current);
  return {...result,scripts:current.scripts,preferences:current.setting.fusionOcsPlugins};
 };
+const BrowserScripts=require(path.join(lab,'src/browser-script-selection.cjs'));
+controller.browserScriptAvailability=uid=>BrowserScripts.state({selected:controller.base(uid).browserScript,scripts:require('./lib/src/store').getDecryptedRenderData().scripts||[],extensions:require('./lib/src/extension-runtime').inventory(undefined,{root:lab})});
 const handlers={
  getSoutijiangState:async({uid,refresh=false,connect=false})=>{const before=soutijiang.view(uid),state=await soutijiang.state(uid,{refresh:refresh===true,connect:connect===true});if(before.loggedIn!==state.loggedIn||before.name!==state.name)connectionChecks.invalidate(uid,'soutijiang');return state;},
  loginSoutijiang:async({uid,visible=false})=>{const state=await soutijiang.login(uid,{visible:visible===true});connectionChecks.invalidate(uid,'soutijiang');return state;},
  logoutSoutijiang:async({uid})=>{const state=await soutijiang.logout(uid);connectionChecks.invalidate(uid,'soutijiang');return state;},
- getAccountOcsRuntime:({uid})=>{require(path.join(lab,'src/controller.cjs')).uidOf(uid);return ocsPlugins.forAccount(require('./lib/src/store').getDecryptedRenderData(),{uid,enhanced:controller.ocsEnhancementsEnabled(uid)});},
+ getAccountOcsRuntime:({uid})=>{require(path.join(lab,'src/controller.cjs')).uidOf(uid);const render=require('./lib/src/store').getDecryptedRenderData(),scriptSelection=controller.browserScriptAvailability(uid);if(scriptSelection.selected==='soutijiang')return{uid,enhanced:false,runtime:null,scripts:(render.scripts||[]).filter(script=>!BrowserScripts.isOcsScript(script)),scriptSelection};return{...ocsPlugins.forAccount(render,{uid,enhanced:controller.ocsEnhancementsEnabled(uid)}),scriptSelection};},
  getOcsPlugins:()=>pluginAction('reconcile'),changeOcsPlugins:input=>pluginAction('change',input),checkOcsUpdate:input=>pluginAction('check',input),reportOcsConflict:input=>pluginAction('reportConflict',input),
  removeQuestionBank:({uid,id})=>{const Banks=require(path.join(lab,'src/question-bank-config.js')),old=controller.bankConfig(uid);if(!old.banks.some(b=>b.id===id))throw Error('题库不存在');const remaining=Banks.parse(old.banks.filter(b=>b.id!==id).map(b=>b.wrapper)),p=controller.base(uid);return controller.saveSettings({uid,expectedRevision:p.revision,settings:{ai:p.ai,answerSettings:controller.answerSettings(uid),searchMethods:Banks.reconcile((p.searchMethods||[]).filter(m=>m.id!==id),remaining.banks),questionBankConfig:remaining.json}});},
  listAiModels:input=>require(path.join(lab,'src/ai-models.cjs')).listModels(input,controller),
@@ -182,6 +184,7 @@ const handlers={
  finishDefaultSetupPrompt:()=>{const store=require('./lib/src/store').store;if(store.get('app.fusionDefaultSetupPromptPending')!==false)store.set('app.fusionDefaultSetupPromptPending',false);return{saved:true};},
  recordBrowserName:({uid,name,signature})=>{require(path.join(lab,'src/controller.cjs')).uidOf(uid);const profile=controller.data.profiles[uid];if(!profile||profile.nativeLoginIdentity!==signature||typeof name!=='string'||!name.trim()||name.length>120)return false;if(!profile.displayName){profile.displayName=name.trim();profile.nameSource='browser';controller.persist();}return true;},
  saveSettings:async input=>{
+  if(input.settings?.browserScript!==undefined){const selected=BrowserScripts.normalize(input.settings.browserScript),available=controller.browserScriptAvailability(input.uid);if(!available[selected])throw Error('所选脚本尚未安装，请先在应用中心完成安装。');}
   const uid=input.uid,old=controller.base(uid),oldRevision=old.revision,settingsBefore=JSON.stringify(controller.answerSettings(uid));
   const withoutAnswers=p=>JSON.stringify({...p,revision:0,answerSettings:null}),before=withoutAnswers(old),result=controller.saveSettings(input),r=controller.runtimes.get(uid);
   if(input.settings?.soutijiangEnabled===false)await soutijiang.stop(uid);

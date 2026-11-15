@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "launcherSourceSha256": "80a72a35d774061a6b683918795acad95e44180398d74641ff5debc13d489992",
-  "launcherBinarySha256": "76bbbe6987ed5ec563ca9ca8176c7f48d8ebb4bd1f82a792868af03db2cd8130",
+  "launcherSourceSha256": "4fdd6dd249321430960f7418e31b79de54c47a3cde45ead2be9d4f7db73e91d5",
+  "launcherBinarySha256": "5b1bf86544df56ddc5b3263c1804a67c943b7d09f9dab385b04d660721a474db",
   "pythonVersion": "3.14.4",
   "ocsVersion": "2.9.24",
   "xingchanVersion": "1.3.0",
@@ -44,12 +44,12 @@
   },
   "electronHost": {
     "path": "runtime/ocs-lab/XueBuTong.exe",
-    "sha256": "76565ee697840816332021e7e8e757e4d62d739cf36f7c735b6f8bed7f252696",
+    "sha256": "a87cb4760ae205dfe47ad378acc85210d12f19bd55d4ccf1d25810e2e96885f3",
     "baseSha256": "6504c0f7ca6e807faa6c0f015559c48ff5f24065bc4ba24601fdaf8feea66293",
     "resourceTool": "electron/rcedit 2.0.0",
     "resourceToolUrl": "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe",
     "resourceToolSha256": "3e7801db1a5edbec91b49a24a094aad776cb4515488ea5a4ca2289c400eade2a",
-    "change": "Windows version resources updated to 2.5.10.0; Electron runtime, identity and icon retained"
+    "change": "Windows version resources updated to 2.5.11.0; Electron runtime, identity and icon retained"
   },
   "ocrRepair": {
     "sources": [

@@ -10,7 +10,7 @@ function compare(a,b){const x=a.split('.').map(Number),y=b.split('.').map(Number
 function atomic(file,value){fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.tmp',typeof value==='string'||Buffer.isBuffer(value)?value:JSON.stringify(value,null,2));fs.renameSync(file+'.tmp',file);}
 function download(url=SOURCE+'?t='+Date.now(),redirects=0){return new Promise((resolve,reject)=>{
  const address=new URL(url);if(address.protocol!=='https:'||!['cdn.ocsjs.com','ocsjs.com'].includes(address.hostname))return reject(Error('更新源不是 OCS 官方地址'));
- const request=https.get(address,{headers:{'User-Agent':'XueBuTong/2.5.10','Cache-Control':'no-cache'}},response=>{
+ const request=https.get(address,{headers:{'User-Agent':'XueBuTong/2.5.11','Cache-Control':'no-cache'}},response=>{
   if(response.statusCode>=300&&response.statusCode<400){response.resume();if(redirects>=3)return reject(Error('更新重定向次数过多'));return download(new URL(response.headers.location,address).href,redirects+1).then(resolve,reject);}
   if(response.statusCode!==200){response.resume();return reject(Error('官方更新服务返回 HTTP '+response.statusCode));}
   const chunks=[];let size=0;response.on('data',chunk=>{size+=chunk.length;if(size>8*1024*1024)request.destroy(Error('官方脚本超过大小限制'));else chunks.push(chunk);});response.on('end',()=>resolve(Buffer.concat(chunks)));response.on('error',reject);

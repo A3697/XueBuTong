@@ -33,7 +33,7 @@ begin
   begin
     ResetProgramFileChecks;
     ProgramFileRoot := Root;
-    SetArrayLength(ProgramFileDecisions, 7032);
+    SetArrayLength(ProgramFileDecisions, 7035);
   end;
   if ProgramFileDecisions[Index] = 0 then
   begin

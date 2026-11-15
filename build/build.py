@@ -1,4 +1,4 @@
-"""Reconstruct the reviewed 2.5.10 baseline and compile its offline installer.
+"""Reconstruct the reviewed 2.5.11 baseline and compile its offline installer.
 
 Never launches the application or installer, downloads dependencies, edits the
 source/dependency trees, or accepts an unreviewed payload by refreshing hashes.
@@ -118,7 +118,7 @@ def build(args):
     if sys.version_info[:3] != (3, 14, 4):
         raise ValueError('必须使用离线依赖内的 Python 3.14.4，请通过 build.ps1 构建。')
     claim_empty(work)
-    report = {'schema': 1, 'version': '2.5.10', 'status': 'running', 'stages': [],
+    report = {'schema': 1, 'version': '2.5.11', 'status': 'running', 'stages': [],
               'sourceRoot': str(source), 'dependencyRoot': str(deps), 'workRoot': str(work),
               'outputRoot': str(output), 'applicationStarted': False, 'installerExecuted': False,
               'networkUsed': False, 'startedAt': time.strftime('%Y-%m-%dT%H:%M:%S%z')}
@@ -140,7 +140,7 @@ def build(args):
         if digest(source/'build/Launcher.cs') != provenance['launcherSourceSha256'] or digest(deps/'runtime/学不通.exe') != provenance['launcherBinarySha256']:
             raise ValueError('启动器源代码与预编译文件的来源摘要不匹配。')
         metadata = json.loads((source/'fusion-install.json').read_text(encoding='utf-8-sig'))
-        if (metadata['version'] != '2.5.10' or provenance['pythonVersion'] != '3.14.4'
+        if (metadata['version'] != '2.5.11' or provenance['pythonVersion'] != '3.14.4'
                 or metadata['dependencies']['ocs'] != provenance['ocsVersion']
                 or metadata['dependencies']['xingchan'] != provenance['xingchanVersion']):
             raise ValueError('组件版本与发布基线不匹配。')

@@ -76,21 +76,23 @@ async function useManagementPage(context,operation){
  });
  queues.set(context,pending);return pending;
 }
-async function setEnabled(context,{root=DEFAULT_ROOT,id,enabled}={}){
+async function setEnabled(context,{root=DEFAULT_ROOT,id,enabled,selectedScript}={}){
  if(!valid(id)||typeof enabled!=='boolean')throw Error('扩展开关参数无效');
+ if(id==='daxuesoutijiang'&&enabled&&selectedScript==='ocs')return{id,enabled:false,requestedEnabled:false,applied:false,restartRequired:false,reason:'account_uses_ocs'};
+ if(manager(id)&&enabled&&selectedScript==='soutijiang')return{id,enabled,applied:false,restartRequired:true,reason:'manager_requires_script_check'};
  const prefs=preferences(root);if((prefs['extensions:'+id]!==false)!==enabled)return{id,enabled,applied:false,restartRequired:true,reason:'preference_mismatch'};
  const item=inventory(undefined,{root}).find(item=>item.id===id);
  if(!item)return{id,enabled,applied:!enabled,restartRequired:enabled,reason:enabled?'extension_not_installed':''};
  const result=await useManagementPage(context,page=>switchInPage(page,item,enabled));
  return{...result,id,chromeId:item.chromeId,requestedEnabled:enabled,restartRequired:!result.applied};
 }
-async function applyInitial(context,{root=DEFAULT_ROOT,paths}={}){
+async function applyInitial(context,{root=DEFAULT_ROOT,paths,deferSoutijiang=false}={}){
  // Include disabled directories even when the caller passes filtered launch
  // arguments: an existing Chrome profile can retain an old unpacked extension.
- const prefs=preferences(root),items=inventory(undefined,{root}),results=[];
+ const prefs=preferences(root),items=inventory(undefined,{root}).sort((a,b)=>Number(b.id==='daxuesoutijiang')-Number(a.id==='daxuesoutijiang')),results=[];
  if(!items.length)return{applied:true,results,restartRequired:false,hasEnabledManager:false};
  const batch=await useManagementPage(context,async page=>{
-  for(const item of items){const enabled=prefs['extensions:'+item.id]!==false;const result=await switchInPage(page,item,enabled);results.push({...result,id:item.id,chromeId:item.chromeId,requestedEnabled:enabled,restartRequired:!result.applied});}
+  for(const item of items){const enabled=!(deferSoutijiang&&item.id==='daxuesoutijiang')&&prefs['extensions:'+item.id]!==false;const result=await switchInPage(page,item,enabled);results.push({...result,id:item.id,chromeId:item.chromeId,requestedEnabled:enabled,restartRequired:!result.applied});}
   return{applied:results.every(result=>result.applied)};
  });
  return{applied:!!batch.applied,results,restartRequired:!batch.applied,hasEnabledManager:results.some(result=>manager(result.id)&&result.requestedEnabled&&result.applied&&result.enabled===true)};

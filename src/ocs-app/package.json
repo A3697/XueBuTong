@@ -1,6 +1,6 @@
 {
   "name": "xuebutong",
-  "version": "2.5.10",
+  "version": "2.5.11",
   "description": "学不通：账号、浏览器与星蝉任务管理",
   "main": "./lib/index.js",
   "types": "./lib/types.d.ts",

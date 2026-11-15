@@ -80,6 +80,8 @@ class ScriptWorker {
     launch(options) {
         var _a, _b, _c;
         return __awaiter(this, void 0, void 0, function* () {
+            this.config.browserScript=options.ocsAccountRuntime?.scriptSelection?.selected||'ocs';
+            if(this.config.browserScript==='ocs')this.extensionPaths=this.extensionPaths.filter(p=>path_1.default.basename(p)!=='daxuesoutijiang');
             if (this.extensionPaths.length) {
                 this.debug('加载拓展：', this.extensionPaths.map((p) => (0, path_1.basename)(p)));
             }
@@ -210,7 +212,7 @@ class ScriptWorker {
         })().finally(()=>{this.showPromise=null;});return this.showPromise;
     }
     async setPlayback({speed}) {if(!this.browser?.__fusionPlayback)throw Error('浏览器尚未就绪');const result=await this.browser.__fusionPlayback.set(speed);console.log('浏览器倍速已设为 '+result.speed+' 倍。');return result;}
-    async setExtensionEnabled({id,enabled}) {if(!this.browser)return;try{const result=await require('../extension-runtime').setEnabled(this.browser,{root:this.fusionRoot,id,enabled});await this.browser.__fusionLocalPort?.updateManager(result);console.log(result.restartRequired?'应用状态已保存，重启浏览器后完全生效。':'应用状态已更新。');return result;}catch{console.error('应用状态已保存，请重启浏览器应用。');}}
+    async setExtensionEnabled({id,enabled}) {if(!this.browser)return;try{const result=await require('../extension-runtime').setEnabled(this.browser,{root:this.fusionRoot,id,enabled,selectedScript:this.config.browserScript});if(result.reason==='account_uses_ocs'){console.log('当前账号选择 OCS，搜题酱扩展保持关闭；可在账号设置切换脚本。');return result;}await this.browser.__fusionLocalPort?.updateManager(result);console.log(result.restartRequired?'应用状态已保存，重启浏览器后完全生效。':'应用状态已更新。');return result;}catch{console.error('应用状态已保存，请重启浏览器应用。');}}
     async capturePreview({requestId,quality=55}) {
         try {
             const pages=this.browser?.pages().filter(page=>!page.isClosed())||[];
@@ -352,8 +354,11 @@ function launchBrowser({ executablePath, headless, args, userDataDir, userscript
                     // 打开开发者模式
                     yield step('正在初始化脚本管理器…');
                     yield openExtensionDeveloperMode(browser, executablePath.includes('edge'));
-                    const extensionState=yield require('../extension-runtime').applyInitial(browser,{root:config.fusionRoot,paths:config.allExtensionPaths||[]});
-                    const registration=yield require('../extension-runtime').ensureScriptCatRegistration(browser,extensionState.results);
+                    const extensionState=yield require('../extension-runtime').applyInitial(browser,{root:config.fusionRoot,paths:config.allExtensionPaths||[],deferSoutijiang:true});
+                    if(config.browserScript==='soutijiang'&&!extensionState.applied)throw Error('脚本管理器状态未确认，已停止启动，避免 OCS 与搜题酱同时运行');
+                    if(extensionState.results.some(item=>item.id==='daxuesoutijiang'&&!item.applied))throw Error('搜题酱暂停状态未确认，已停止启动，避免脚本同时运行');
+                    yield require('../ocs-script-switch').apply(browser,{managers:extensionState.results,enabled:config.browserScript!=='soutijiang',receiptFile:path_1.default.join(userDataDir,'xuebutong-script-selection.json')});
+                    const registration=config.browserScript==='soutijiang'?{checked:false}:yield require('../extension-runtime').ensureScriptCatRegistration(browser,extensionState.results);
                     if(registration.recovered)console.log('已恢复脚本猫中保存的 OCS 脚本运行状态。');
                     else if(registration.checked&&!registration.ready)console.warn('脚本猫运行状态尚未就绪，将继续检查安装；如仍未运行，请重启该账号浏览器。');
                     const managedRuntime=require('../local-userscripts').bundledUpdate({root:config.fusionRoot,userDataDir,userscripts,serverPort,authToken,uid,accountRuntime:ocsAccountRuntime});
@@ -373,6 +378,13 @@ function launchBrowser({ executablePath, headless, args, userDataDir, userscript
                     const installURLs=userscripts.map(url=>require('../local-userscripts').installationURL(url,{serverPort,authToken}));
                     scriptConfig.bundledUpdate=managedRuntime;
                     const warn = yield setupUserScripts({ browser, userscripts:installURLs, step, config: scriptConfig });
+                    if(config.browserScript==='soutijiang'){
+                        // Recheck after installing other user scripts, then enable the
+                        // unmodified official extension. Its question-bank session is separate.
+                        yield require('../ocs-script-switch').apply(browser,{managers:extensionState.results,enabled:false,receiptFile:path_1.default.join(userDataDir,'xuebutong-script-selection.json')});
+                        const extensionPrefs=require('../extension-runtime').preferences(config.fusionRoot);
+                        if(extensionPrefs['extensions:daxuesoutijiang']!==false){const result=yield require('../extension-runtime').setEnabled(browser,{root:config.fusionRoot,id:'daxuesoutijiang',enabled:true,selectedScript:'soutijiang'});if(!result.applied)throw Error('大学搜题酱未能启用，请重启该账号浏览器');}
+                    }
                     // 监听网络请求
                     browserNetworkRoute(authToken, browser, { accountUid: uid });
                     // 运行自动化脚本
@@ -483,7 +495,7 @@ async function initScripts(urls, browser, config = {}, options = {}) {
             const verified = async () => {
                 if (!scriptcat) return false;
                 const installed = await guard(() => require('../local-userscripts').installedBundledDigest(browser, scriptcat.chromeId));
-                return installed?.sha256 === bundle.hash;
+                return installed?.sha256 === bundle.hash && installed.status === 1;
             };
             if (scriptcat && config.force_update_script !== true && await verified()) {
                 require('../local-userscripts').confirmBundledUpdate(bundle);
