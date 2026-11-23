@@ -10,7 +10,7 @@ const Bundled=require('../src/fusion/bundled-script.cjs');
 function updateModule(version){
  const errors=[],timers=[],notices=[];
  const context={console,Date,setTimeout:run=>timers.push(run),lib:{
-  Script:class{constructor(options){Object.assign(this,options);this.cfg=Object.fromEntries(Object.entries(options.configs).map(([key,item])=>[key,structuredClone(item.defaultValue)]));this.methods={getLastVersion:async()=>({'last-version':'5.4.0'})};}},
+  Script:class{constructor(options){Object.assign(this,options);this.cfg=Object.fromEntries(Object.entries(options.configs).map(([key,item])=>[key,structuredClone(item.defaultValue)]));this.methods={getLastVersion:async()=>({'last-version':'5.4.2'})};}},
   $:{isInTopWindow:()=>true},$gm:{getInfos:()=>({script:{version}})},$message:{error:value=>errors.push(value)},$modal:{confirm:()=>notices.push('new-version')},$ui:{notes:value=>value},h:()=>({})
  }};
  const begin=source.indexOf('  const debug$1 ='),end=source.indexOf('  const RenderScript =',begin);
@@ -25,9 +25,9 @@ test('reproduces the reported four-component version failure in the real update 
  const run=updateModule('5.2.3.1');run.context.module.oncomplete();
  assert.equal(run.context.validVersion('5.2.3.1'),null);assert.equal(run.errors.length,1);assert.match(run.errors[0],/semver/);assert.equal(run.timers.length,0);
 });
-test('official 5.4.0 passes the same hook without disabling update notifications',async()=>{
+test('official 5.4.2 passes the same hook without disabling update notifications',async()=>{
  const actual=metadata(source),run=updateModule(actual.version);run.context.module.oncomplete();
- assert.equal(actual.version,'5.4.0');assert.equal(manifest.metadata.version,actual.version);assert.equal(run.context.module.cfg.autoNotify,true);
+ assert.equal(actual.version,'5.4.2');assert.equal(manifest.metadata.version,actual.version);assert.equal(run.context.module.cfg.autoNotify,true);
  assert.equal(run.context.validVersion(actual.version),actual.version);assert.deepEqual(run.errors,[]);assert.equal(run.timers.length,1);
  await run.timers[0]();assert.deepEqual(run.notices,[]);
  assert.equal(crypto.createHash('sha256').update(Buffer.from(source)).digest('hex'),manifest.sha256);
@@ -44,5 +44,5 @@ test('previous invalid bundled bytes upgrade while preserving disabled state and
  assert.equal(crypto.createHash('sha256').update(fs.readFileSync(previous)).digest('hex'),'69421d8a5396e9801bbfcddeb8be9ebc05a57557d9f5c92c093f643baf09afa4');
  const render={scripts:[{id:271,enable:false,isLocalScript:true,info:{id:271,name:'OCS 网课助手',version:'5.2.3.1',code_url:previous}}]};
  assert.equal(Bundled.seedBundledScript(render,{fusionBundledScriptSeeded:true},path.resolve(__dirname,'..')),true);
- assert.equal(render.scripts.length,1);assert.equal(render.scripts[0].id,271);assert.equal(render.scripts[0].enable,false);assert.equal(render.scripts[0].info.version,'5.4.0');
+ assert.equal(render.scripts.length,1);assert.equal(render.scripts[0].id,271);assert.equal(render.scripts[0].enable,false);assert.equal(render.scripts[0].info.version,'5.4.2');
 });

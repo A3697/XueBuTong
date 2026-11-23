@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name       				OCS 网课助手
-// @version    				5.4.0
+// @version    				5.4.2
 // @description				OCS(online-course-script) 网课助手，官网 https://docs.ocsjs.com ，专注于帮助大学生从网课中释放出来 让自己的时间把握在自己的手中，拥有人性化的操作页面，流畅的步骤提示，支持  【超星学习通】 【知到智慧树】 【职教云】 【智慧职教】 【中国大学MOOC】 【雨课堂】 等网课的学习，作业。具体的功能请查看脚本悬浮窗中的教程页面。
 // @author     				enncy
 // @license    				MIT
@@ -12931,6 +12931,10 @@ ${content}</tr>
         icourse: (index) => {
           var _a;
           (_a = document.querySelectorAll(".u-questionItem,[class*=questionBody]").item(index)) == null ? void 0 : _a.scrollIntoView({ behavior: "smooth", block: "center" });
+        },
+        yuketang_exam: (index) => {
+          var _a;
+          (_a = document.querySelectorAll(".exercise-item").item(index)) == null ? void 0 : _a.scrollIntoView({ behavior: "smooth", block: "center" });
         }
       }
     },
@@ -23543,7 +23547,9 @@ self.onmessage = function (e) {
   function examination(opts) {
     var _a;
     lib.$message.info(`开始考试`);
-    CommonProject.scripts.workResults.methods.init();
+    CommonProject.scripts.workResults.methods.init({
+      questionPositionSyncHandlerType: "yuketang_exam"
+    });
     const redundanceWords = opts.redundanceWordsText.split("\n").filter(Boolean);
     const titleTransform = (titles) => titles.filter((t2) => t2 == null ? void 0 : t2.innerText).map(
       (t2) => t2 ? removeRedundantWords(
@@ -23554,8 +23560,8 @@ self.onmessage = function (e) {
     const worker = new OCSWorker({
       root: ".exam-main--content .subject-item",
       elements: {
-        title: ".clearfix.exam-font .custom_ueditor_cn_body",
-        options: "ul.list-unstyled li .custom_ueditor_cn_body",
+        title: ["h3", "h4", "h5", "h6"].map((h2) => `${h2.trim()}.clearfix.exam-font`).join(","),
+        options: "ul.list-unstyled li",
         textareas: (root2) => {
           const editors = lib.$$el('iframe[id^="ueditor_"]', root2);
           if (editors.length) {
@@ -23588,8 +23594,9 @@ self.onmessage = function (e) {
         if (type && (type === "multiple" || type === "single")) {
           const resolver = createDefaultQuestionResolver(ctx, (o) => extractTextWithImages(o).text)[type];
           return await resolver(searchInfos, elements2.options, async (type2, answer, option) => {
-            if (!(option == null ? void 0 : option.querySelector(".el-icon-check"))) {
-              option.click();
+            const label = option.querySelector("label");
+            if (!(label == null ? void 0 : label.classList.contains("is-checked")) || !option.querySelector(".el-icon-check")) {
+              label == null ? void 0 : label.click();
               await lib.$.sleep(500);
             }
           });
@@ -25363,7 +25370,7 @@ search-infos-element .error {
   padding-left: 12px;
 }
 .work-result-list {
-  max-height: 400px;
+  max-height: 110px;
   overflow: auto;
   padding: 4px 0px;
 }

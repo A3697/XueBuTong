@@ -1,11 +1,11 @@
 {
-  "version": "2.5.11",
-  "build": "20261115-browser-script-selection",
+  "version": "2.5.12",
+  "build": "20261122-soutijiang-account-pool",
   "files": [
     {
       "path": "assets/about/index.html",
       "size": 3028,
-      "sha256": "490fa051d04c33d19e42aaaa78593c9a661591341cee8721bcd1cb95d8d7fd9b"
+      "sha256": "17534f0522e6c1334c0159ccd2eb15dcc1da4c31a8fedba59b717471e30ea9c0"
     },
     {
       "path": "assets/about/main.js",
@@ -29,18 +29,18 @@
     },
     {
       "path": "assets/defaults/ocs-script.json",
-      "size": 1092,
-      "sha256": "d04d1e38b5ca0f8a23690539d5609ded967ddda2517e1432c93825a832b74e4e"
+      "size": 1059,
+      "sha256": "cf097b67b69e8b5a086d3931664f72e5795eae0c121f3641dc7d6b84ad220716"
     },
     {
       "path": "assets/defaults/ocs.upstream.user.js",
-      "size": 985417,
-      "sha256": "3aa9cf73a557647302ba04ac4715969c464cba83d9f85294e1e1421e6bcbf810"
+      "size": 1011842,
+      "sha256": "f710b9b090a7be815570cae04f3309cc9c7f2ce736e2acf4e936ce54d9f4da2e"
     },
     {
       "path": "assets/defaults/ocs.user.js",
-      "size": 1008039,
-      "sha256": "788f84461938413e52caa83a2286abee08187d5e492b7e4d3db412540bc9f9df"
+      "size": 1008453,
+      "sha256": "68d0436ad55fd655472635a37e6659576e7765b7ff12c57ee6eb3cfbfd6c416b"
     },
     {
       "path": "assets/feature-code.jpg",
@@ -119,8 +119,8 @@
     },
     {
       "path": "fusion-install.json",
-      "size": 343,
-      "sha256": "3548e10d5b18f7768d06e893420a98e7ce6e97aedc555eb5f8cb0b5e2a733ee3"
+      "size": 342,
+      "sha256": "fbb39067eef654febbf14dc45dac8373a39b12d5f8d28f415001f8701e1869bb"
     },
     {
       "path": "LICENSE",
@@ -619,8 +619,8 @@
     },
     {
       "path": "ocs-lab/resources/app/lib/src/tasks/startup.server.js",
-      "size": 8509,
-      "sha256": "a582f90ba4dc9f3f17148e9c0bde57d7ad92efa0dc3a188ba5eaaa545e320884"
+      "size": 8657,
+      "sha256": "1c95a395db39eed1b3afcf149db88104bb03585a9a0d36ff3e828fd23a5c2f62"
     },
     {
       "path": "ocs-lab/resources/app/lib/src/tasks/updater.js",
@@ -649,8 +649,8 @@
     },
     {
       "path": "ocs-lab/resources/app/lib/src/worker/index.js",
-      "size": 58327,
-      "sha256": "a146a2d71a69665183480a062e6c44def1bad45576408570f20355ee227e0598"
+      "size": 58683,
+      "sha256": "cc6eb0dc73501bb07df9686a08eb048de934789c7fc5dc46255014ca847b7c91"
     },
     {
       "path": "ocs-lab/resources/app/lib/types.js",
@@ -17120,7 +17120,7 @@
     {
       "path": "ocs-lab/resources/app/package.json",
       "size": 1061,
-      "sha256": "7bc84ac65162fd76c6aa45bbfa5644f5f0187f88f10dafb9c9a38ad326ef7665"
+      "sha256": "38002c057d5107e8e011a5584019c4d05bcd80c551101de3d4d76919b9a4c734"
     },
     {
       "path": "ocs-lab/resources/app/public/application-catalog.json",
@@ -17280,7 +17280,7 @@
     {
       "path": "ocs-lab/resources/app/public/assets/index.c87a5b08.js",
       "size": 203557,
-      "sha256": "ee359c7855f201434fb3b5c03273da40b4d93daee63f0df5148d6e87ac18ff20"
+      "sha256": "2e165ea00c6a79fc1d2f91267d9a86277c6a12091b15cf38d99dba47b6f5b0e3"
     },
     {
       "path": "ocs-lab/resources/app/public/assets/index.ce0090a0.js",
@@ -17504,8 +17504,8 @@
     },
     {
       "path": "ocs-lab/resources/app/xingchan-lab-bootstrap.cjs",
-      "size": 38043,
-      "sha256": "481e89602e85f6467a1caec589f7eacbc23040a0036be5332f0600413acbedc0"
+      "size": 38526,
+      "sha256": "1334fe6a1c366c8e33b78930502b876f5ed6f94b98df19d48aa19d40fe22b449"
     },
     {
       "path": "ocs-lab/resources/bin/chrome/chrome/137.0.7151.55.manifest",
@@ -18260,7 +18260,7 @@
     {
       "path": "ocs-lab/XueBuTong.exe",
       "size": 199155200,
-      "sha256": "a87cb4760ae205dfe47ad378acc85210d12f19bd55d4ccf1d25810e2e96885f3"
+      "sha256": "9695b5a2fc0fe25ec06e19235e954943312131743cba8c10763729d6bc1df002"
     },
     {
       "path": "python3144/_asyncio.pyd",
@@ -18515,7 +18515,7 @@
     {
       "path": "src/application-settings.cjs",
       "size": 12844,
-      "sha256": "cbb5b3aa8c515950f87e2f7672697c92d6eeaf268fb80e3021d2113ff2c39c90"
+      "sha256": "74280bf14494ad917242da74445c0e2c0099d358ea704d959fc0aa776c460813"
     },
     {
       "path": "src/application-ui.css",
@@ -18584,18 +18584,18 @@
     },
     {
       "path": "src/config-transfer.cjs",
-      "size": 21513,
-      "sha256": "e1655759b73322c2f8af8c08d10f5bb52df555af9a06c8788f66b02ceab0e056"
+      "size": 21689,
+      "sha256": "486cbfa6ceb33f1411fd3248424340d82fe964e279af3ba461cc2f7b8afd13a4"
     },
     {
       "path": "src/connection-checks.cjs",
-      "size": 10513,
-      "sha256": "57f490a721afeac3763a6e27ea0d82869107e2eb2a88dd175c3e769611ef2efc"
+      "size": 10534,
+      "sha256": "ac452dba4841009c959425bfd0280a774b436917cb62a002b83d156560ad211e"
     },
     {
       "path": "src/controller.cjs",
-      "size": 23649,
-      "sha256": "4102b6936f0d269541b20e887d1793a4245b9a7f26cc225f0059f5d7aa22a729"
+      "size": 23737,
+      "sha256": "91f555d3ca49a661965ebaeb42085b76bd886f4ca55efb24ad184b494b4b7f03"
     },
     {
       "path": "src/course_completion.py",
@@ -18615,12 +18615,12 @@
     {
       "path": "src/default-components.cjs",
       "size": 9028,
-      "sha256": "68655dd2d64197bbbd9be16e7f389722534c06f2f2124824e5096fa77f0d74dc"
+      "sha256": "21cda6f982c6bd4c7a408d64b49fca826582cf162b7f0f06000a0ea98d705670"
     },
     {
       "path": "src/dialogs.css",
-      "size": 8009,
-      "sha256": "cc1fac42aa0a5b28845296673811f0080bed6268510f1b3434d8afcb35246156"
+      "size": 9006,
+      "sha256": "98ea99eafe322a647097aaa472cb9a3acb0a749c3ef927292177f505c0b41ef6"
     },
     {
       "path": "src/dialogs.js",
@@ -18629,8 +18629,8 @@
     },
     {
       "path": "src/electron-bootstrap.cjs",
-      "size": 38043,
-      "sha256": "481e89602e85f6467a1caec589f7eacbc23040a0036be5332f0600413acbedc0"
+      "size": 38526,
+      "sha256": "1334fe6a1c366c8e33b78930502b876f5ed6f94b98df19d48aa19d40fe22b449"
     },
     {
       "path": "src/enrollment-year.js",
@@ -18765,7 +18765,7 @@
     {
       "path": "src/ocs-plugin-manager.cjs",
       "size": 11252,
-      "sha256": "398532caf4f83eef6e018730f4bd80cbfcbfbfdedd90a7d84a520199f2a09dfa"
+      "sha256": "9427b234d454f860c185e57b0b8b302aebd98e239e15e993174e3bf48fae9b67"
     },
     {
       "path": "src/ocs-plugins-ui.js",
@@ -18799,8 +18799,8 @@
     },
     {
       "path": "src/provider-config-ui.js",
-      "size": 18823,
-      "sha256": "6b9b542bcf0d00583e3b077b0d016dc24fffdb38ab25f8f207a3ce5cd1c124a2"
+      "size": 14481,
+      "sha256": "d2964e171a8115369ccdccf7ca1a64e63458cb17fcf31310a3561f3b39b60146"
     },
     {
       "path": "src/question-bank-config.js",
@@ -18828,9 +18828,39 @@
       "sha256": "fc80965e558d59061f7a155db82d060c3b8bb268e797c80d88c949d1f88502ad"
     },
     {
+      "path": "src/soutijiang-accounts.cjs",
+      "size": 752,
+      "sha256": "f4313c17d0d83a1fe4f13bdecca25053bdac0d87d7df821369f6b5f52642353f"
+    },
+    {
+      "path": "src/soutijiang-auth.cjs",
+      "size": 5152,
+      "sha256": "df61c366bc410f8de67fb35b31b16fbc62a779d4deee6c376e5faf15a29ae82e"
+    },
+    {
+      "path": "src/soutijiang-broker.cjs",
+      "size": 504,
+      "sha256": "8992703587e24d49e5d80e3c94a3f003e79b4b0588a0a1acb2a5b20a56a99319"
+    },
+    {
+      "path": "src/soutijiang-browser.cjs",
+      "size": 2850,
+      "sha256": "1da07d56f5ecf4d77146ee880a00f40fecc7d73e812375277a867450ccc20cbc"
+    },
+    {
+      "path": "src/soutijiang-pool.cjs",
+      "size": 18266,
+      "sha256": "bf05d44726d2ee2aa2fef0a4c5edb6ec2e2c9a3735daeadb1e2d21ff035924d4"
+    },
+    {
+      "path": "src/soutijiang-ui.js",
+      "size": 8327,
+      "sha256": "22e9699a0cf2f2feb3036b40eb7eb63b3ae5f23c20e81af1d074b810a001fe19"
+    },
+    {
       "path": "src/soutijiang.cjs",
-      "size": 37153,
-      "sha256": "2133323dded92818d33c033b9d1ea8e77a55c09e402ffdf5918a9e94d7a16989"
+      "size": 37895,
+      "sha256": "69fddbd0f80e575058f980e5299db9d717e5238d1242dd5690630558102e2372"
     },
     {
       "path": "src/star-monitor-ui.js",
@@ -35175,15 +35205,15 @@
     {
       "path": "学不通.exe",
       "size": 118784,
-      "sha256": "5b1bf86544df56ddc5b3263c1804a67c943b7d09f9dab385b04d660721a474db"
+      "sha256": "ac21db74a4a07221d18ce702dba4179cb4366ae3a860d448d4258b57e26ec879"
     }
   ],
-  "fileCount": 7035,
-  "totalBytes": 1122731976,
+  "fileCount": 7041,
+  "totalBytes": 1122793784,
   "privacy": {
     "policyVersion": 1,
-    "fileCount": 7035,
-    "bytesScanned": 1122731976,
+    "fileCount": 7041,
+    "bytesScanned": 1122793784,
     "archiveMembersScanned": 2051,
     "archiveExpandedBytes": 39793784,
     "knownValuesSupplied": 0,
@@ -35218,18 +35248,18 @@
     "学不通.exe": {
       "FileDescription": "学不通",
       "ProductName": "学不通",
-      "FileVersion": "2.5.11.0",
-      "ProductVersion": "2.5.11.0",
+      "FileVersion": "2.5.12.0",
+      "ProductVersion": "2.5.12.0",
       "OriginalFilename": "学不通.exe"
     },
     "ocs-lab/XueBuTong.exe": {
       "FileDescription": "学不通",
       "ProductName": "学不通",
-      "FileVersion": "2.5.11.0",
-      "ProductVersion": "2.5.11.0",
+      "FileVersion": "2.5.12.0",
+      "ProductVersion": "2.5.12.0",
       "OriginalFilename": "XueBuTong.exe"
     }
   },
-  "userscriptVersion": "5.4.0",
+  "userscriptVersion": "5.4.2",
   "passed": true
 }

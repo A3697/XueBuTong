@@ -4,7 +4,7 @@ const {archiveName}=require('./application-settings.cjs');
 const ITEMS={scriptcat:{name:'脚本猫',url:'https://cdn.ocsjs.com/extensions/scriptcat-1.1.2_0.zip',group:'extensions'},ocr:{name:'OCR 识别组件',url:'https://cdn.ocsjs.com/app/download/ocr.zip',group:'apps'},ocs:{name:'OCS 网课助手脚本',url:'https://cdn.ocsjs.com/ocs.user.js'}};
 function download(url,limit,{signal,onProgress=()=>{}}={},redirects=0){return new Promise((resolve,reject)=>{
  let address;try{address=new URL(url);if(address.protocol!=='https:'||address.hostname!=='cdn.ocsjs.com'||address.username||address.password||address.port)throw Error('默认组件下载地址无效');}catch(error){reject(error);return;}
- const request=https.get(address,{agent:false,signal,headers:{'User-Agent':'XueBuTong/2.5.11','Accept-Encoding':'identity'}},response=>{
+ const request=https.get(address,{agent:false,signal,headers:{'User-Agent':'XueBuTong/2.5.12','Accept-Encoding':'identity'}},response=>{
   if([301,302,303,307,308].includes(response.statusCode)){response.resume();if(redirects>=3||!response.headers.location){reject(Error('默认组件重定向异常'));return;}download(new URL(response.headers.location,address).href,limit,{signal,onProgress},redirects+1).then(resolve,reject);return;}
   if(response.statusCode!==200){response.resume();reject(Error('组件下载失败（HTTP '+response.statusCode+'）'));return;}
   const total=Number(response.headers['content-length'])||0;if(total>limit){response.destroy();reject(Error('组件包超过大小限制'));return;}

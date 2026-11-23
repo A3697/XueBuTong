@@ -18,7 +18,7 @@ test('seeded imported defaults upgrade and deduplicate the official remote sourc
  const {directory,imported}=fixture(t),render={scripts:[local(10,imported),remote(20)]},app={fusionBundledScriptSeeded:true};
  const hash=crypto.createHash('sha256').update(fs.readFileSync(imported)).digest('hex');
  assert.equal(Bundled.seedBundledScript(render,app,directory),true);
- assert.equal(render.scripts.length,1);assert.equal(render.scripts[0].id,10);assert.equal(render.scripts[0].info.version,'5.4.0');
+ assert.equal(render.scripts.length,1);assert.equal(render.scripts[0].id,10);assert.equal(render.scripts[0].info.version,'5.4.2');
  assert.equal(render.scripts[0].info.code_url,path.join(directory,'assets/defaults/ocs.user.js'));assert.equal(render.scripts[0].enable,true);
  assert.equal(crypto.createHash('sha256').update(fs.readFileSync(imported)).digest('hex'),hash);
  assert.equal(Bundled.seedBundledScript(render,app,directory),false);
@@ -50,7 +50,7 @@ test('removing the bundled script stays respected while a new installation still
 test('default-component setup retains the patched bundle instead of fetching an overriding OCS copy',async t=>{
  const {directory}=fixture(t),{DefaultComponents}=require('../src/fusion/default-components.cjs');let fetched=false;
  const setup=new DefaultComponents({root:directory,downloadRoot:directory,applications:{},fetchBytes:async()=>{fetched=true;throw Error('Unexpected download');}});setup.installed=()=>true;
- const result=await setup.install();assert.equal(result.complete,true);assert.equal(fetched,false);assert.equal(result.script.info.version,'5.4.0');assert.equal(result.script.info.code_url,path.join(directory,'assets/defaults/ocs.user.js'));
+ const result=await setup.install();assert.equal(result.complete,true);assert.equal(fetched,false);assert.equal(result.script.info.version,'5.4.2');assert.equal(result.script.info.code_url,path.join(directory,'assets/defaults/ocs.user.js'));
 });
 
 test('default-setup renderer preserves custom local OCS scripts and disabled official entries',()=>{
@@ -76,5 +76,5 @@ test('private snapshot original bundled bytes and official duplicate both migrat
   }
  }
  const selected={scripts};Bundled.seedBundledScript(selected,{fusionBundledScriptSeeded:true},directory);
- assert.equal(selected.scripts.length,1);assert.equal(selected.scripts[0].info.version,'5.4.0');assert.equal(selected.scripts[0].enable,true);
+ assert.equal(selected.scripts.length,1);assert.equal(selected.scripts[0].info.version,'5.4.2');assert.equal(selected.scripts[0].enable,true);
 });

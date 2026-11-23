@@ -73,6 +73,7 @@ function startupServer() {
             const render = (0, store_1.getDecryptedRenderData)();
             try{const shared=require(require('path').resolve(__dirname,'../../../../../..','src/browser-answer-settings.cjs')).read(req.query,store_1.store.store.server.authToken,{});res.setHeader('Cache-Control','no-store');res.end(String(shared?shared.enabled:render.setting.ocs.openSync));}catch{res.status(403).end('false');}
         });
+        app.post('/fusion/soutijiang-session',require(require('path').resolve(__dirname,'../../../../../..','src/soutijiang-broker.cjs')).handle);
         app.post('/fusion/answer', async(req,res)=>{
             res.setHeader('Cache-Control','no-store');
             try{res.json(await require(require('path').resolve(__dirname,'../../../../../..','src/browser-answer-settings.cjs')).answer(req.query,store_1.store.store.server.authToken,req.body));}

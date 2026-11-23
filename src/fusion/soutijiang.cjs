@@ -1,7 +1,7 @@
 'use strict';
 
-// The official extension owns authentication and requests. This adapter never
-// extracts DXUSS, changes extension files, or opens a learning-platform page.
+// The official extension owns authentication and requests. The account-scoped
+// sharing adapter transfers its login state without changing extension files.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const EXTENSION_ID='egfkhocobmgeafdbjbphhfdfbmlobgdc';
 const SUPPORTED_VERSION='1.17.6';
@@ -258,7 +258,8 @@ async function createChromeSession({root,profile,extension,chromium,visible=fals
     return 'data:image/jpeg;base64,'+bytes.toString('base64');
    }finally{await render.close().catch(()=>{});}
   }
-  return {user,message,image,screenshot,loginQr,show:showLogin,close:()=>context.close(),closed:()=>page.isClosed()};
+  const auth=require('./soutijiang-auth.cjs');
+  return {user,message,image,screenshot,loginQr,readAuth:()=>auth.read(context),applyAuth:input=>auth.apply(context,input),show:showLogin,close:()=>context.close(),closed:()=>page.isClosed()};
  }catch(error){await context.close().catch(()=>{});throw error;}
 }
 
@@ -271,10 +272,12 @@ class SoutijiangManager{
   if(fs.existsSync(this.bindingFile))try{const value=JSON.parse(fs.readFileSync(this.bindingFile,'utf8'));if(value&&typeof value==='object'&&!Array.isArray(value))this.bindings=value;}catch{}
  }
  enabled(uid){uidOf(uid);return this.controller?.data?.profiles?.[uid]?.soutijiangEnabled===true;}
- configured(uid){uidOf(uid);return this.bindings[uid]?.configured===true&&fs.existsSync(confined(this.root,path.join(this.home,uid,'profile')));}
+ profilePath(uid){return confined(this.root,this.profileFor?this.profileFor(uid):path.join(this.home,uid,'profile'));}
+ bindingKey(uid){return this.bindingKeyFor?this.bindingKeyFor(uid):uid;}
+ configured(uid){uidOf(uid);return this.bindings[this.bindingKey(uid)]?.configured===true&&fs.existsSync(this.profilePath(uid));}
  setConfigured(uid,configured){
-  uidOf(uid);if(this.bindings[uid]?.configured===configured||!configured&&!Object.hasOwn(this.bindings,uid))return;
-  if(configured)this.bindings[uid]={configured:true,verifiedAt:new Date(this.clock()).toISOString()};else delete this.bindings[uid];
+  uidOf(uid);const key=this.bindingKey(uid);if(this.bindings[key]?.configured===configured||!configured&&!Object.hasOwn(this.bindings,key))return;
+  if(configured)this.bindings[key]={configured:true,verifiedAt:new Date(this.clock()).toISOString()};else delete this.bindings[key];
   fs.mkdirSync(this.home,{recursive:true});const temporary=confined(this.root,this.bindingFile+'.tmp-'+crypto.randomBytes(6).toString('hex'));
   try{fs.writeFileSync(temporary,JSON.stringify(this.bindings),{flag:'wx'});fs.renameSync(temporary,this.bindingFile);}finally{if(fs.existsSync(temporary))fs.unlinkSync(temporary);}
  }
@@ -311,7 +314,7 @@ class SoutijiangManager{
   const ext=this.extension();if(!ext.installed)throw new SoutijiangError('soutijiang_extension_missing','请先在应用中心安装大学搜题酱官方扩展',409);
   if(!ext.compatible)throw new SoutijiangError('soutijiang_extension_incompatible','当前搜题酱扩展版本尚未验证，已停止接管以避免错误请求',409);
   const generation=this.generations.get(uid)||0;
-  const profile=confined(this.root,path.join(this.home,uid,'profile'));fs.mkdirSync(profile,{recursive:true});
+  const profile=this.profilePath(uid);fs.mkdirSync(profile,{recursive:true});
   const pending=(async()=>{
    const session=await this.sessionFactory({root:this.runtimeRoot,profile,extension:ext,chromium:this.chromium,visible});
    if(this.closed||(this.generations.get(uid)||0)!==generation){await session.close();throw new SoutijiangError('soutijiang_cancelled','搜题酱启动已取消',409);}
@@ -334,7 +337,15 @@ class SoutijiangManager{
  markQuota(uid,method){
   const identity=this.states.get(uid)?.providerUid;if(!identity)return;
   const day=dayKey(this.clock()),old=this.quotas[identity];this.quotas[identity]={...(old?.day===day?old:{}),day,[method]:true};
-  for(const [key,value]of Object.entries(this.quotas))if(value.day!==day)delete this.quotas[key];
+  this.saveQuota();
+ }
+ markUsage(uid,method){
+  const identity=this.states.get(uid)?.providerUid;if(!identity)return;
+  const day=dayKey(this.clock()),old=this.quotas[identity],quota=old?.day===day?old:{day};
+  quota[method+'Successful']=Math.max(0,Number(quota[method+'Successful'])||0)+1;this.quotas[identity]=quota;this.saveQuota();
+ }
+ saveQuota(){
+  const day=dayKey(this.clock());for(const [key,value]of Object.entries(this.quotas))if(value.day!==day)delete this.quotas[key];
   fs.mkdirSync(this.home,{recursive:true});const temporary=confined(this.root,this.quotaFile+'.tmp-'+crypto.randomBytes(6).toString('hex'));
   try{fs.writeFileSync(temporary,JSON.stringify(this.quotas),{flag:'wx'});fs.renameSync(temporary,this.quotaFile);}finally{if(fs.existsSync(temporary))fs.unlinkSync(temporary);}
  }
@@ -357,14 +368,14 @@ class SoutijiangManager{
   if(!status.screenshotExhausted){
    const response=await this.request(uid,session,'ScreenshotSearch',{image},ms);let result;
    try{result=parseScreenshot(question,response);}catch(error){if(error.code==='soutijiang_answer_restricted')this.states.set(uid,{...this.states.get(uid),blocked:true,status:'attention',error:error.code,message:error.message});throw error;}
-   if(result.kind){this.states.set(uid,{...this.states.get(uid),status:'ready',error:'',message:''});return result;}
+   if(result.kind){this.markUsage(uid,'screenshot');this.states.set(uid,{...this.states.get(uid),status:'ready',error:'',message:''});return result;}
    const action=classifyError(result);
    if(action==='quota')this.markQuota(uid,'screenshot');else throw this.providerError(uid,result,action);
   }
   if(this.view(uid).solveExhausted)throw new SoutijiangError('soutijiang_daily_exhausted','搜题酱今日额度已耗尽，今日跳过此方式',429);
   const data={base64:image,historyResult:'',questionText:plain(question.title),options:question.options.map(o=>o.label+'. '+plain(o.text)),questionType:TYPE_NAMES[question.type],blankNum:question.blankCount||0,llmType:(question.images||[]).length?'img':'',courseName:String(question.courseName||''),questionFrom:'',index:0};
   const result=parseSolve(question,await this.request(uid,session,'SolveExercise',data,ms));
-  if(result.kind){this.states.set(uid,{...this.states.get(uid),status:'ready',error:'',message:''});return result;}
+  if(result.kind){this.markUsage(uid,'solve');this.states.set(uid,{...this.states.get(uid),status:'ready',error:'',message:''});return result;}
   const action=classifyError(result);if(action==='quota'){this.markQuota(uid,'solve');throw new SoutijiangError('soutijiang_daily_exhausted','搜题酱今日额度已耗尽，今日跳过此方式',429);}throw this.providerError(uid,result,action);
  }
  providerError(uid,result,action){

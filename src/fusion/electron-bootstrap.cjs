@@ -74,8 +74,8 @@ controller.resolveSchool=login=>verifier.resolveSchool(login);
 const {BrowserCacheRemoval}=require(path.join(lab,'src/browser-cache-removal.cjs'));const browserCacheRemoval=new BrowserCacheRemoval({userData:app.getPath('userData')});
 const {ConnectionChecks}=require(path.join(lab,'src/connection-checks.cjs'));const connectionChecks=new ConnectionChecks(controller);
 const {ApplicationSettings}=require(path.join(lab,'src/application-settings.cjs'));const applicationSettings=new ApplicationSettings(lab);
-const soutijiang=require(path.join(lab,'src/soutijiang.cjs')).createManager({root:lab,controller});controller.soutijiang=soutijiang;
-const stopSoutijiangHelpers=()=>Promise.all([...new Set([...soutijiang.sessions.keys(),...soutijiang.pending.keys()])].map(uid=>soutijiang.stop(uid)));
+const soutijiang=require(path.join(lab,'src/soutijiang-pool.cjs')).createPool({root:lab,controller});controller.soutijiang=soutijiang;require(path.join(lab,'src/soutijiang-broker.cjs')).install(soutijiang);
+const stopSoutijiangHelpers=()=>Promise.all([...new Set([...soutijiang.sessions.keys(),...soutijiang.pending.keys(),...[...soutijiang.parked.keys()].map(key=>key.split('\0')[0])])].map(uid=>soutijiang.stop(uid)));
 const {DefaultComponents}=require(path.join(lab,'src/default-components.cjs'));const defaultComponents=new DefaultComponents({root:lab,downloadRoot:()=>require('./lib/src/store').store.store.paths.downloadFolder,applications:applicationSettings});
 require(path.join(lab,'src/theme.cjs')).installTheme({ipcMain,nativeTheme,isSender:event=>isLabSender(event)});
 const windowSizes=require(path.join(lab,'src/window-sizes.cjs'));
@@ -139,7 +139,7 @@ controller.onOpenHtml=async({uid,url,mode})=>{
 controller.onCloseHtml=async({uid})=>closePanel(uid);
 const allowed=['getInitializationStatus','getDefaultSetupState','finishDefaultSetupPrompt','installDefaultComponents','getSettings','saveSettings','syncNativeLogin','recordBrowserName','verifyLogin','listStatus','start','stop','openHtml','getLogs','claimBrowser','releaseBrowser','prepareBrowserCacheRemoval','restoreBrowserCacheRemoval','finishBrowserCacheRemoval','getWorkspacePreferences','saveWorkspacePreferences','exportConfig','importConfig','cloneAccountSettings','removeAccountSettings','getStarMonitor','starTaskAction','confirmClose','finishClose','openAbout','getConnectionChecks','checkConnections','getApplicationStates','changeApplicationState','installSoutijiang','removeSoutijiang','clearLogs','takeStartupLaunchPlan','setPlayback','copyQuestionBank','getQuestionBankConfiguration','importQuestionBanks','removeQuestionBank','listAiModels'];
 allowed.push('getAccountOcsRuntime','getOcsPlugins','changeOcsPlugins','checkOcsUpdate','reportOcsConflict');
-allowed.push('getSoutijiangState','loginSoutijiang','logoutSoutijiang');
+allowed.push('getSoutijiangState','loginSoutijiang','logoutSoutijiang','changeSoutijiangAccounts');
 const ocsPlugins=require(path.join(lab,'src/ocs-plugin-manager.cjs')).manager(lab);
 const pluginAction=async(method,input)=>{
  const native=require('./lib/src/store'),render=native.getDecryptedRenderData();
@@ -156,10 +156,11 @@ const pluginAction=async(method,input)=>{
 const BrowserScripts=require(path.join(lab,'src/browser-script-selection.cjs'));
 controller.browserScriptAvailability=uid=>BrowserScripts.state({selected:controller.base(uid).browserScript,scripts:require('./lib/src/store').getDecryptedRenderData().scripts||[],extensions:require('./lib/src/extension-runtime').inventory(undefined,{root:lab})});
 const handlers={
- getSoutijiangState:async({uid,refresh=false,connect=false})=>{const before=soutijiang.view(uid),state=await soutijiang.state(uid,{refresh:refresh===true,connect:connect===true});if(before.loggedIn!==state.loggedIn||before.name!==state.name)connectionChecks.invalidate(uid,'soutijiang');return state;},
- loginSoutijiang:async({uid,visible=false})=>{const state=await soutijiang.login(uid,{visible:visible===true});connectionChecks.invalidate(uid,'soutijiang');return state;},
- logoutSoutijiang:async({uid})=>{const state=await soutijiang.logout(uid);connectionChecks.invalidate(uid,'soutijiang');return state;},
- getAccountOcsRuntime:({uid})=>{require(path.join(lab,'src/controller.cjs')).uidOf(uid);const render=require('./lib/src/store').getDecryptedRenderData(),scriptSelection=controller.browserScriptAvailability(uid);if(scriptSelection.selected==='soutijiang')return{uid,enhanced:false,runtime:null,scripts:(render.scripts||[]).filter(script=>!BrowserScripts.isOcsScript(script)),scriptSelection};return{...ocsPlugins.forAccount(render,{uid,enhanced:controller.ocsEnhancementsEnabled(uid)}),scriptSelection};},
+ getSoutijiangState:async({uid,slotId,refresh=false,connect=false})=>{const before=soutijiang.view(uid).connectionKey,state=await soutijiang.state(uid,{slotId,refresh:refresh===true,connect:connect===true});if(before!==state.connectionKey)connectionChecks.invalidate(uid,'soutijiang');return state;},
+ loginSoutijiang:async({uid,slotId,visible=false})=>{const state=await soutijiang.login(uid,{slotId,visible:visible===true});connectionChecks.invalidate(uid,'soutijiang');return state;},
+ logoutSoutijiang:async({uid,slotId})=>{const state=await soutijiang.logout(uid,{slotId});connectionChecks.invalidate(uid,'soutijiang');return state;},
+ changeSoutijiangAccounts:async({uid,...input})=>{const before=soutijiang.view(uid).connectionKey,state=await soutijiang.change(uid,input);if(before!==state.connectionKey)connectionChecks.invalidate(uid,'soutijiang');return state;},
+ getAccountOcsRuntime:({uid})=>{require(path.join(lab,'src/controller.cjs')).uidOf(uid);const render=require('./lib/src/store').getDecryptedRenderData(),scriptSelection=controller.browserScriptAvailability(uid);if(scriptSelection.selected==='soutijiang')return{uid,enhanced:false,runtime:null,soutijiangShare:soutijiang.ticket(uid),scripts:(render.scripts||[]).filter(script=>!BrowserScripts.isOcsScript(script)),scriptSelection};return{...ocsPlugins.forAccount(render,{uid,enhanced:controller.ocsEnhancementsEnabled(uid)}),scriptSelection};},
  getOcsPlugins:()=>pluginAction('reconcile'),changeOcsPlugins:input=>pluginAction('change',input),checkOcsUpdate:input=>pluginAction('check',input),reportOcsConflict:input=>pluginAction('reportConflict',input),
  removeQuestionBank:({uid,id})=>{const Banks=require(path.join(lab,'src/question-bank-config.js')),old=controller.bankConfig(uid);if(!old.banks.some(b=>b.id===id))throw Error('题库不存在');const remaining=Banks.parse(old.banks.filter(b=>b.id!==id).map(b=>b.wrapper)),p=controller.base(uid);return controller.saveSettings({uid,expectedRevision:p.revision,settings:{ai:p.ai,answerSettings:controller.answerSettings(uid),searchMethods:Banks.reconcile((p.searchMethods||[]).filter(m=>m.id!==id),remaining.banks),questionBankConfig:remaining.json}});},
  listAiModels:input=>require(path.join(lab,'src/ai-models.cjs')).listModels(input,controller),
@@ -289,7 +290,7 @@ app.on('web-contents-created',(_event,contents)=>{
     await contents.executeJavaScript(fs.readFileSync(path.join(lab,'src','version-ui.js'),'utf8'));
     const uiRoot=path.join(lab,'src','ocs-ui');
     await contents.insertCSS(fs.readFileSync(path.join(lab,'src/dialogs.css'),'utf8'));
-    for(const file of ['dialogs.js','answer-settings.js','account-tags.js','ai-config.js','ai-providers.js','provider-config-ui.js','client-environment.js','enrollment-year.js','import-conflicts.js','account-form.js'])await contents.executeJavaScript(fs.readFileSync(path.join(lab,'src',file),'utf8')+'\n;void 0;');
+    for(const file of ['dialogs.js','answer-settings.js','account-tags.js','ai-config.js','ai-providers.js','soutijiang-ui.js','provider-config-ui.js','client-environment.js','enrollment-year.js','import-conflicts.js','account-form.js'])await contents.executeJavaScript(fs.readFileSync(path.join(lab,'src',file),'utf8')+'\n;void 0;');
     const js=path.join(uiRoot,'renderer.js');const css=path.join(uiRoot,'renderer.css');
     if(fs.existsSync(css))await contents.insertCSS(fs.readFileSync(css,'utf8'));
     await contents.insertCSS(fs.readFileSync(path.join(lab,'src','workspace-ui.css'),'utf8'));

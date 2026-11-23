@@ -129,6 +129,7 @@ test('the real HTTP handlers expose the account marker only after capability ver
   if(name==='../store')return {store,getDecryptedRenderData:()=>({setting:{ocs:{openSync:false,store:{}}}})};
   if(name==='../utils')return {getProjectPath:()=>__dirname};if(name==='../utils/ocr')return {};
   if(name==='../local-userscripts')return {installRoute(){}};if(name.endsWith('browser-answer-settings.cjs'))return Shared;
+  if(name.endsWith('soutijiang-broker.cjs'))return require('../src/fusion/soutijiang-broker.cjs');
   throw Error('Unexpected server test dependency');
  }};
  vm.createContext(context);vm.runInContext(fs.readFileSync(source,'utf8'),context);await exports.startupServer();Shared.install(controller());

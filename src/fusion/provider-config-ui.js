@@ -15,13 +15,13 @@
   const A=window.FusionAIConfig,B=window.FusionQuestionBanks;
   const loaded=await bridge.getQuestionBankConfiguration({uid});if(signal?.aborted)return;if(loaded.uid!==uid)throw Error('题库配置账号不匹配');
   let banks=B.parse(loaded.json).banks,ais=clone(snapshot.aiConfigurations||[]),methods=clone(snapshot.searchMethods),universalCleared=false,active=true,tab=initialTab;
-  const body=el('div','fusion-provider-config'),tabs=el('div','fusion-provider-tabs'),content=el('div','fusion-provider-content'),note=el('p','xc-poc-note','在此处新增、修改或移除后，点击“确定”统一保存；“取消”保留原配置。');
+  const body=el('div','fusion-provider-config'),tabs=el('div','fusion-provider-tabs'),content=el('div','fusion-provider-content'),note=el('p','xc-poc-note','题库与开关点击“确定”保存；搜题酱账号管理和登录操作立即保存。');
   tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','题库类型');body.append(tabs,note,content);
-  const pages=new Map(),tabButtons=new Map();let child=null,soutiTimer=null,soutiBusy=false,soutiState=null;
+  const pages=new Map(),tabButtons=new Map();let child=null;
   for(const [key,label]of [['banks','普通题库'],['soutijiang','大学搜题酱'],['ai','AI'],['universal','万能题库']]){
    const page=el('section','fusion-provider-page'),control=button(label,()=>select(key));page.id='fusion-provider-'+key;page.setAttribute('role','tabpanel');control.setAttribute('role','tab');control.setAttribute('aria-controls',page.id);tabs.append(control);content.append(page);pages.set(key,page);tabButtons.set(key,control);
   }
-  function select(key){tab=pages.has(key)?key:'banks';for(const [id,page]of pages){page.hidden=id!==tab;const control=tabButtons.get(id);control.setAttribute('aria-selected',String(id===tab));control.tabIndex=id===tab?0:-1;}if(tab==='soutijiang')void refreshSouti();else clearTimeout(soutiTimer);}
+  function select(key){tab=pages.has(key)?key:'banks';for(const [id,page]of pages){page.hidden=id!==tab;const control=tabButtons.get(id);control.setAttribute('aria-selected',String(id===tab));control.tabIndex=id===tab?0:-1;}soutiUI.setVisible(tab==='soutijiang');}
   tabs.onkeydown=event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const keys=[...pages.keys()],index=keys.indexOf(tab),next=event.key==='Home'?0:event.key==='End'?keys.length-1:(index+(event.key==='ArrowRight'?1:keys.length-1))%keys.length;select(keys[next]);tabButtons.get(keys[next]).focus();};
   function reconcile(){methods=A.reconcile(B.reconcile(methods,banks),ais);}
   function enable(id){const method=methods.find(m=>m.id===id);if(method)method.enabled=true;}
@@ -75,29 +75,15 @@
   const universalPage=pages.get('universal');universalPage.append(el('p','xc-poc-note','沿用星蝉原题库接口，与普通题库 JSON 解析相互独立。'));
   const universalKey=field(universalPage,'万能题库 Key',{password:true}),universalStatus=el('p','xc-poc-key-preview',snapshot.xingchanBank.keyPreview?'已保存：'+snapshot.xingchanBank.keyPreview:'未配置，默认关闭');universalKey.maxLength=8192;universalKey.placeholder='留空保留已保存密钥';
   const clear=button('清除万能题库配置',async()=>{if(await confirmRemove('万能题库')){universalKey.value='';universalCleared=true;universalStatus.textContent='将在点击“确定”后清除';clear.disabled=true;}},{danger:true});clear.disabled=!snapshot.xingchanBank.hasKey;universalPage.append(universalStatus,clear);universalKey.oninput=()=>{if(universalKey.value){universalCleared=false;clear.disabled=false;}};
-  const soutiPage=pages.get('soutijiang'),soutiLabel=el('label','fusion-provider-switch'),soutiSwitch=el('input','fusion-answer-switch');soutiSwitch.type='checkbox';soutiSwitch.setAttribute('role','switch');soutiSwitch.setAttribute('aria-label','接管大学搜题酱');soutiSwitch.checked=snapshot.soutijiangEnabled===true;
-  soutiLabel.title='按账号独立配置，默认关闭。按搜题顺序调用官方扩展，优先截图搜题；服务明确当天额度耗尽后才使用自动答题额度，全部耗尽后当日跳过。验证、会员限制和限流会停止请求，不切换额度。';soutiLabel.append(soutiSwitch,el('span','','接管大学搜题酱'));
-  const soutiStatus=el('p','xc-poc-note','正在读取登录状态…'),soutiQr=el('img','fusion-soutijiang-qr'),soutiTools=el('div','fusion-provider-actions');soutiStatus.setAttribute('role','status');soutiQr.alt='大学搜题酱官方登录二维码';soutiQr.hidden=true;
-  const soutiInstall=button('安装官方扩展',()=>soutiAction(async()=>{await bridge.installSoutijiang();return bridge.getSoutijiangState({uid});})),soutiLogin=button('恢复登录／获取二维码',()=>soutiAction(()=>bridge.loginSoutijiang({uid}))),soutiWindow=button('打开官方登录窗口',()=>soutiAction(()=>bridge.loginSoutijiang({uid,visible:true}))),soutiRefresh=button('检查登录状态',()=>refreshSouti(true)),soutiLogout=button('退出登录',async()=>{if((await window.FusionDialogs.show({title:'退出大学搜题酱',message:'将退出此账号保存的搜题酱登录，不影响学习平台登录。此操作立即生效。',buttons:['取消','退出登录'],defaultId:0,cancelId:0})).response===1)await soutiAction(()=>bridge.logoutSoutijiang({uid}));},{danger:true});
-  soutiTools.append(soutiInstall,soutiLogin,soutiWindow,soutiRefresh,soutiLogout);soutiPage.append(soutiLabel,soutiStatus,soutiQr,soutiTools,el('p','xc-poc-note','请按二维码提示选择微信或大学搜题酱 App 扫码；二维码未能显示时，可打开官方登录窗口。网络使用直连。登录与退出立即生效；接管开关点击“确定”后保存。导入配置后需重新登录搜题酱。'));
-  function renderSouti(){
-   if(!active)return;const state=soutiState||{},ready=state.installed&&state.compatible;
-   soutiStatus.textContent=!state.installed?'尚未安装大学搜题酱官方扩展。':!state.compatible?'当前扩展版本尚未验证，暂不接管；请保留原版使用。':state.message||(state.loggedIn?'已登录：'+(state.name||'大学搜题酱账号'):'尚未确认登录，可恢复登录或获取二维码。');
-   if(state.loggedIn&&(state.screenshotExhausted||state.solveExhausted))soutiStatus.textContent+=' '+(state.screenshotExhausted&&state.solveExhausted?'今日额度已耗尽，次日恢复。':state.screenshotExhausted?'截图额度已耗尽，将使用自动答题额度。':'自动答题额度已耗尽。');
-   const qr=typeof state.qrDataUrl==='string'&&/^data:image\/png;base64,/.test(state.qrDataUrl)?state.qrDataUrl:'';soutiQr.hidden=!qr||state.loggedIn;if(qr)soutiQr.src=qr;else soutiQr.removeAttribute('src');
-   soutiInstall.hidden=!!state.installed;soutiInstall.disabled=soutiBusy;soutiLogin.hidden=state.loggedIn===true;soutiLogin.disabled=soutiBusy||!ready;soutiWindow.hidden=state.loggedIn===true;soutiWindow.disabled=soutiBusy||!ready;soutiRefresh.disabled=soutiBusy||!ready;soutiLogout.hidden=!state.loggedIn;soutiLogout.disabled=soutiBusy;
-  }
-  function pollSouti(){clearTimeout(soutiTimer);if(active&&tab==='soutijiang'&&soutiState?.phase==='awaiting-login')soutiTimer=setTimeout(()=>void refreshSouti(),3000);}
-  async function soutiAction(action){if(soutiBusy||!active)return;soutiBusy=true;renderSouti();let failure;try{soutiStatus.textContent='正在处理…';const result=await action();if(active){if(result.uid!==uid)throw Error('搜题酱登录账号不匹配');soutiState=result;}}catch(error){failure=error;}finally{soutiBusy=false;if(active){renderSouti();if(failure)soutiStatus.textContent=failure.message;else pollSouti();}}}
-  async function refreshSouti(connect=false){if(!bridge.getSoutijiangState){soutiStatus.textContent='当前版本未提供搜题酱接管，请更新后使用。';return;}await soutiAction(()=>bridge.getSoutijiangState({uid,refresh:true,connect}));}
+  const soutiUI=window.FusionSoutijiangUI.mount(pages.get('soutijiang'),{uid,bridge,enabled:snapshot.soutijiangEnabled});
   renderBanks();renderAI();select(initialTab);
   const dialog=window.FusionDialogs.open({title:'题库配置',content:body,buttons:['取消','确定'],defaultId:1,cancelId:0,onAction:async index=>{
    if(index!==1)return;if(json.value.trim())throw Error('普通题库中还有未解析的 JSON，请先“解析并添加”，或清空后再确定。');
    reconcile();const bankMethod=methods.find(m=>m.id==='xingchan-bank');if(universalCleared)bankMethod.enabled=false;else if(universalKey.value&&!snapshot.xingchanBank.hasKey)bankMethod.enabled=true;
-   await save({questionBankConfig:B.parse(banks.map(bank=>bank.wrapper)).json,aiConfigurations:ais,searchMethods:methods,xingchanBankKey:universalKey.value,clearXingchanBankKey:universalCleared,soutijiangEnabled:soutiSwitch.checked});
+   await save({questionBankConfig:B.parse(banks.map(bank=>bank.wrapper)).json,aiConfigurations:ais,searchMethods:methods,xingchanBankKey:universalKey.value,clearXingchanBankKey:universalCleared,soutijiangEnabled:soutiUI.enabled});
   }});dialog.panel.classList.add('fusion-provider-dialog');const abort=()=>dialog.close();signal?.addEventListener('abort',abort,{once:true});
   if(editId)Promise.resolve().then(()=>active&&(A.isId(editId)?editAI(editId):editId==='soutijiang'?select('soutijiang'):editId==='xingchan-bank'?select('universal'):editBank(editId))).catch(error=>window.FusionDialogs.alert(error.message));
-  await dialog.result;signal?.removeEventListener('abort',abort);active=false;clearTimeout(soutiTimer);child?.close();banks=[];ais=[];universalKey.value='';json.value='';soutiQr.removeAttribute('src');body.replaceChildren();
+  await dialog.result;signal?.removeEventListener('abort',abort);active=false;soutiUI.dispose();child?.close();banks=[];ais=[];universalKey.value='';json.value='';body.replaceChildren();
  }
  window.FusionProviderConfig={open};
 })();

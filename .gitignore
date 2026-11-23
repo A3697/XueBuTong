@@ -10,3 +10,4 @@ instances/
 private/
 evidence/
 lab-logs/
+.code-review-graph/

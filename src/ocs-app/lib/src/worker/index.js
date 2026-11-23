@@ -193,7 +193,7 @@ class ScriptWorker {
             const deadline=setTimeout(()=>process.exit(1),8000);
             const browser=this.browser;
             try {
-                for(const helper of [browser?.__fusionWindowSize,browser?.__fusionLocalPort,browser?.__fusionWindowGuard]){
+                for(const helper of [browser?.__fusionSoutijiang,browser?.__fusionWindowSize,browser?.__fusionLocalPort,browser?.__fusionWindowGuard]){
                     try{await helper?.dispose();}catch(error){console.warn('浏览器辅助组件关闭未完成。');}
                 }
                 await browser?.close();
@@ -385,6 +385,7 @@ function launchBrowser({ executablePath, headless, args, userDataDir, userscript
                         const extensionPrefs=require('../extension-runtime').preferences(config.fusionRoot);
                         if(extensionPrefs['extensions:daxuesoutijiang']!==false){const result=yield require('../extension-runtime').setEnabled(browser,{root:config.fusionRoot,id:'daxuesoutijiang',enabled:true,selectedScript:'soutijiang'});if(!result.applied)throw Error('大学搜题酱未能启用，请重启该账号浏览器');}
                     }
+                    if(config.browserScript==='soutijiang'&&ocsAccountRuntime?.soutijiangShare){browser.__fusionSoutijiang=yield require(path_1.default.join(config.fusionRoot,'src/soutijiang-browser.cjs')).attach(browser,{port:serverPort,token:ocsAccountRuntime.soutijiangShare.token,onError:message=>console.warn(message)});}
                     // 监听网络请求
                     browserNetworkRoute(authToken, browser, { accountUid: uid });
                     // 运行自动化脚本
