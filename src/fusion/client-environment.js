@@ -1,6 +1,6 @@
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;root.FusionClientEnvironment=api;})(typeof globalThis==='object'?globalThis:this,function(){
  'use strict';
- const DEFAULTS=Object.freeze({deviceId:'',androidVersion:'17',model:'2410DPN6CC',buildNumber:'CP2A.260605.016',chromeVersion:'151.0.7922.199',webviewBase:'',dalvikBase:'',schildWebview:'',schildDalvik:''});
+ const DEFAULTS=Object.freeze({deviceId:'',androidVersion:'17',model:'2410DPN6CC',buildNumber:'CP2A.260605.016',chromeVersion:'151.0.7922.199',webviewBase:'',dalvikBase:'',schildWebview:'',schildDalvik:'',webviewFull:'',dalvikFull:''});
  function defaults(){return {...DEFAULTS};}
  function normalize(input){
   if(input==null)return defaults();
@@ -9,6 +9,7 @@
   for(const key of Object.keys(DEFAULTS)){
    if(input[key]===undefined)continue;
    if(typeof input[key]!=='string')throw Error('客户端环境字段必须为文本。');
+   if(['webviewFull','dalvikFull'].includes(key)&&/[\r\n]/.test(input[key]))throw Error('完整 User-Agent 必须为单行文本。');
    result[key]=input[key].trim();
   }
   for(const key of ['deviceId','schildWebview','schildDalvik']){
@@ -19,6 +20,7 @@
   for(const key of ['model','buildNumber'])if(!/^[A-Za-z0-9._ -]{1,80}$/.test(result[key]))throw Error('机型和构建号仅支持字母、数字、空格、点、下划线和短横线。');
   if(!/^\d{1,3}(?:\.\d{1,6}){3}$/.test(result.chromeVersion))throw Error('Chrome 版本需包含四段数字。');
   for(const key of ['webviewBase','dalvikBase'])if(result[key]&&(result[key].length>1024||!/^[\x20-\x7e]+$/.test(result[key])||/\(schild:|ChaoXingStudy_/i.test(result[key])))throw Error('UA 基础串需为单行英文字符，最多 1024 字符；设备号及 schild 后缀由程序追加。');
+  for(const key of ['webviewFull','dalvikFull'])if(result[key]&&(result[key].length>2048||!/^[\x20-\x7e]+$/.test(result[key])))throw Error('完整 User-Agent 需为单行英文字符，最多 2048 字符。');
   return result;
  }
  function bytes(length){const data=new Uint8Array(length);if(typeof globalThis.crypto?.getRandomValues==='function')globalThis.crypto.getRandomValues(data);else if(typeof require==='function')data.set(require('node:crypto').randomBytes(length));else throw Error('随机生成器不可用。');return data;}
@@ -34,6 +36,6 @@
   const result={...DEFAULTS,...templates[bytes(1)[0]%templates.length],schildWebview:randomDeviceId(),schildDalvik:randomDeviceId()};
   delete result.deviceId;return result;
  }
- function forClone(input){return {...normalize(input),deviceId:'',schildWebview:'',schildDalvik:''};}
+ function forClone(input){return {...normalize(input),deviceId:'',schildWebview:'',schildDalvik:'',webviewFull:'',dalvikFull:''};}
  return {defaults,normalize,randomDeviceId,randomFingerprint,forClone};
 });

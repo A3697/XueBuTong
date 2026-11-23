@@ -7,11 +7,11 @@ PUBLIC_FILES = {'LICENSE', 'README.md', 'CONTEXT.md', '.gitignore', 'build.ps1',
                 'fusion-install.json', 'assets/fusion.ico', 'assets/fusion.png',
                 'assets/ocs-original.png', 'assets/product-links.json',
                 'docs/开源与更新.md', 'docs/源码与构建说明.md', 'docs/第三方组件说明.md',
-                'docs/2.5.10修复验收.md','docs/2.5.12修复验收.md'}
+                'docs/2.5.10修复验收.md','docs/2.5.12修复验收.md','docs/2.5.13修复验收.md'}
 # These standalone modules were written for the fusion application, not copied
 # from the protected application's frontend. The derived HTML/CSS/app remain local.
 PUBLIC_PANEL = {'scroll-follow.js', 'task-state.js', 'course-filter.js',
-                'course-completion.js', 'panel-layout.js'}
+                'course-completion.js', 'panel-layout.js', 'course-watch.js'}
 
 
 def public_source(name):

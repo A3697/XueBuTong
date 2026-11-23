@@ -17,11 +17,26 @@ class ConnectionChecks{
  constructor(controller,{transport=requestJson,wrapper=createWrapperAdapter}={}){this.controller=controller;this.transport=transport;this.wrapper=wrapper;this.results=new Map();this.pending=new Map();this.file=controller.dataDir?path.join(controller.dataDir,'connection-checks.json'):null;if(this.file)try{const saved=JSON.parse(fs.readFileSync(this.file,'utf8'));for(const [key,value]of Object.entries(saved)){if(value&&/^[a-f0-9]{64}$/.test(value.fingerprint)&&['connected','failed','limited','waiting','unconfigured'].includes(value.state))this.results.set(key,value);}}catch{}}
  persist(){if(!this.file)return;fs.mkdirSync(path.dirname(this.file),{recursive:true});fs.writeFileSync(this.file+'.tmp',JSON.stringify(Object.fromEntries(this.results)),'utf8');fs.renameSync(this.file+'.tmp',this.file);}
  invalidate(uid,id){uidOf(uid);if(this.results.delete(uid+':'+id))this.persist();}
- enabled(uid){const settings=this.controller.getSettings({uid});return settings.searchMethods.filter(item=>item.enabled).map(item=>({id:item.id,name:AIConfig.isId(item.id)?settings.aiConfigurations?.find(ai=>ai.id===item.id)?.name||'AI 搜题':item.id==='soutijiang'?'大学搜题酱':item.id==='xingchan-bank'?'万能题库':settings.questionBanks.find(bank=>bank.id===item.id)?.name||'言溪题库'}));}
+ items(uid,includeConfigured=false){const settings=this.controller.getSettings({uid}),ais=includeConfigured?(settings.aiConfigurations||AIConfig.read(this.controller,uid)):[];
+  const configured=id=>AIConfig.isId(id)?AIConfig.configured(ais.find(ai=>ai.id===id)):id==='soutijiang'?settings.soutijiangConfigured===true:id==='xingchan-bank'?!!this.controller.plainSecret(uid,'xingchanBankKey'):settings.questionBanks?.some(bank=>bank.id===id);
+  return settings.searchMethods.filter(item=>item.enabled||includeConfigured&&configured(item.id)).map(item=>({id:item.id,name:AIConfig.isId(item.id)?settings.aiConfigurations?.find(ai=>ai.id===item.id)?.name||'AI 搜题':item.id==='soutijiang'?'大学搜题酱':item.id==='xingchan-bank'?'万能题库':settings.questionBanks?.find(bank=>bank.id===item.id)?.name||'言溪题库'}));
+ }
+ enabled(uid){return this.items(uid);}
  fingerprint(uid,id){const c=this.controller,souti=id==='soutijiang'?c.soutijiang?.view(uid):null;const data=id==='soutijiang'?[c.base(uid).soutijiangEnabled===true,souti?.version,souti?.compatible,souti?.connectionKey]:AIConfig.isId(id)?AIConfig.read(c,uid).find(ai=>ai.id===id):id==='xingchan-bank'?[c.plainSecret(uid,'xingchanBankKey')]:c.bankConfig(uid).banks.find(b=>b.id===id)?.wrapper;return crypto.createHash('sha256').update(JSON.stringify(data||null)).digest('hex');}
- snapshot({uid}){uidOf(uid);return{uid,items:this.enabled(uid).map(item=>{const cached=this.results.get(uid+':'+item.id);const result=cached?.fingerprint===this.fingerprint(uid,item.id)?cached:null;return {...item,...(result||{state:'unchecked',message:'尚未验证'})};})};}
+ snapshot({uid}){uidOf(uid);return{uid,items:this.items(uid,true).map(item=>{const cached=this.results.get(uid+':'+item.id);const result=cached?.fingerprint===this.fingerprint(uid,item.id)?cached:null;return {...item,...(result||{state:'unchecked',message:'尚未验证'})};})};}
  async check({uid,only,draftAI}){
-  uidOf(uid);const items=typeof only==='string'&&AIConfig.isId(only)?[{id:only,name:draftAI?.name||AIConfig.read(this.controller,uid).find(ai=>ai.id===only)?.name||'AI 搜题'}]:this.enabled(uid).filter(item=>!Array.isArray(only)||only.includes(item.id)),results=[];
+  uidOf(uid);let items;
+  // The AI editor may validate a new, unsaved draft. Row checks only accept
+  // existing account methods and never apply one draft to multiple providers.
+  if(typeof only==='string'&&AIConfig.isId(only)&&draftAI)items=[{id:only,name:draftAI.name||'AI 搜题'}];
+  else if(only===undefined&&!draftAI)items=this.enabled(uid);
+  else{
+   const ids=typeof only==='string'&&AIConfig.isId(only)?[only]:only;
+   const known=new Set(this.controller.getSettings({uid}).searchMethods.map(item=>item.id));
+   if(draftAI||!Array.isArray(ids)||ids.length>50||ids.some(id=>typeof id!=='string'||!known.has(id)))throw Error('只能验证当前账号已有的搜题方式');
+   items=this.items(uid,true).filter(item=>ids.includes(item.id));
+  }
+  const results=[];
   for(const item of items)results.push(await this.one(uid,item,draftAI));
   return{uid,items:results};
  }
@@ -48,8 +63,9 @@ class ConnectionChecks{
       result=response.status>=200&&response.status<300?(valid?{state:'connected',message:'连接与鉴权正常，模型已响应'}:{state:'failed',message:'接口返回了不符合所选类型的数据'}):networkResult(response.status);result.httpStatus=response.status;
      }
     }else if(item.id==='soutijiang'){
-     const state=await c.soutijiang?.state(uid,{refresh:true,connect:true});
-     result=!state?.installed?{state:'unconfigured',message:'请先安装大学搜题酱官方扩展'}:!state.compatible?{state:'waiting',message:'此扩展版本尚未验证，接管已停止'}:state.blocked?{state:'limited',message:'请在官方应用中处理验证后重新登录'}:!state.loggedIn?{state:'waiting',message:'请在题库配置中扫码登录搜题酱'}:state.screenshotExhausted&&state.solveExhausted?{state:'limited',message:'今日额度已耗尽，次日恢复'}:{state:'connected',message:'官方登录状态有效；此检查不消耗搜题额度'};
+     const overview=c.soutijiang?.view(uid),noneEnabled=Array.isArray(overview?.accounts)&&!overview.accounts.some(account=>account.enabled!==false);
+     const state=noneEnabled?overview:await c.soutijiang?.state(uid,{refresh:true,connect:true,forBank:true});
+     result=!state?.installed?{state:'unconfigured',message:'请先安装大学搜题酱官方扩展'}:!state.compatible?{state:'waiting',message:'此扩展版本尚未验证，接管已停止'}:noneEnabled?{state:'unconfigured',message:'请在题库配置中启用至少一个搜题酱账号'}:state.blocked?{state:'limited',message:'请在官方应用中处理验证后重新登录'}:!state.loggedIn?{state:'waiting',message:'请在题库配置中扫码登录搜题酱'}:state.screenshotExhausted&&state.solveExhausted?{state:'limited',message:'今日额度已耗尽，次日恢复'}:{state:'connected',message:'官方登录状态有效；此检查不消耗搜题额度'};
     }else if(item.id==='xingchan-bank'){
      const token=c.plainSecret(uid,'xingchanBankKey'),runtime=c.runtimes.get(uid);
      if(!token)result={state:'unconfigured',message:'尚未配置万能题库 Key'};

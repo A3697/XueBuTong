@@ -33,7 +33,11 @@ def install_disabled_updates():
         'remaining', 'terminate', 'reason', 'reminder', 'countdown',
         'check_count', 'state_path', 'log_path',
     }
-    if {field.name for field in fields(version.CheckResult)} != expected_result_fields:
+    result_fields = {field.name for field in fields(version.CheckResult)}
+    # 1.3.1 added two update-policy flags. Keep the exact known contracts;
+    # an unrelated future shape still needs an explicit compatibility review.
+    update_policy_flags = {'overdue', 'force'}
+    if result_fields not in (expected_result_fields, expected_result_fields | update_policy_flags):
         raise RuntimeError('unsupported original CheckResult contract')
     if not {'version', 'content', 'describes', 'update_time', 'raw'}.issubset(
             {field.name for field in fields(version.CloudInfo)}):
@@ -52,6 +56,7 @@ def install_disabled_updates():
             error='', source=LOCAL_SOURCE, deadline=0.0, remaining=0.0,
             terminate=False, reason='', reminder=False, countdown=False,
             check_count=0, state_path='', log_path='',
+            **{name: False for name in update_policy_flags & result_fields},
         )
 
     def local_summary(self):

@@ -1,16 +1,21 @@
 {
-  "version": "2.5.12",
-  "build": "20261122-soutijiang-account-pool",
+  "version": "2.5.13",
+  "build": "20261123-xingchan131-course-monitor",
   "files": [
     {
       "path": "assets/about/index.html",
-      "size": 3028,
-      "sha256": "17534f0522e6c1334c0159ccd2eb15dcc1da4c31a8fedba59b717471e30ea9c0"
+      "size": 3735,
+      "sha256": "f3796dff04c62d790ddd4e3733d37218d14288a3bf672ad3c819b34c4bf8677c"
     },
     {
       "path": "assets/about/main.js",
       "size": 2485,
       "sha256": "75ac8b0236735d06fdfa5bf626b81e822d90bc36e8b779f58e716d35857e399e"
+    },
+    {
+      "path": "assets/about/ocs-channel.jpg",
+      "size": 149271,
+      "sha256": "aebb57bd298302c95e57bdfa3f042ce0834070c6df792c5db120aecaa4a2366b"
     },
     {
       "path": "assets/about/qq-group.jpg",
@@ -19,8 +24,13 @@
     },
     {
       "path": "assets/about/style.css",
-      "size": 3233,
-      "sha256": "c0356098ef9650fb679473c0039ceb641a04b75f37adc1b5e40c7f641cffc465"
+      "size": 3622,
+      "sha256": "ff3e534a06c66f6b7083e4f5a47e03f4612ad4e20a8652baa42c454c96a97dd7"
+    },
+    {
+      "path": "assets/about/xingchan-channel.jpg",
+      "size": 147272,
+      "sha256": "6d36408f12a27f0695f587f2d3ca60464386abe1e3db88215dbc84957318de60"
     },
     {
       "path": "assets/defaults/ocs-adapter.json",
@@ -75,42 +85,42 @@
     {
       "path": "assets/star-native/_source-manifest.json",
       "size": 1733,
-      "sha256": "96e2eb15fe2519cd420b55ee97b7586ba77f42fd1119bc5e4fcbdb2c0661e5bb"
+      "sha256": "a6ef1bf5a4c86d4bdee49e35f537ed0d13ef0c17e39922e6baffc192006b7238"
     },
     {
-      "path": "assets/star-native/assets/HomeView-6SXB7337.js",
+      "path": "assets/star-native/assets/HomeView-BAgp7oMc.js",
       "size": 9246,
-      "sha256": "9cea69f93bb27bb061311706c338c26e76de6facbafeece1e8760303dd11c0f1"
+      "sha256": "e75e7ddd6d6a24479ea8803e56b528c2b59cd9d79bc326277e455faef67800cf"
     },
     {
-      "path": "assets/star-native/assets/index-CV2OgwTP.js",
-      "size": 114763,
-      "sha256": "05104dfe04bc40ac852af2d6f88842151b7dcf3ee868d361bdbbde3639b9ac6a"
+      "path": "assets/star-native/assets/index-BjG3p18M.css",
+      "size": 18791,
+      "sha256": "3d710263a4181e936bb84e755fb6dcdb7975605c87ef0ac9c3f16c4fc7c40ab2"
     },
     {
-      "path": "assets/star-native/assets/index-DSxB9oRL.css",
-      "size": 18647,
-      "sha256": "5aafb0f5f30bb6d4ef9a83efaf4439bd2dd0ee2aa8487906ac999d3e8e81401c"
+      "path": "assets/star-native/assets/index-DISd9wYt.js",
+      "size": 115027,
+      "sha256": "7ccd51ace1a8f92ee9219b983eed1de9b376bf1d4e5f57e6ec8ff1fbaeaa816e"
     },
     {
-      "path": "assets/star-native/assets/LoginView-BmmIUzaa.js",
+      "path": "assets/star-native/assets/LoginView-BJQftBFz.js",
       "size": 2512,
-      "sha256": "df6917b45d478cd0a257fca5fe99f088fc08fd3221af430de56bbda02e6038ed"
+      "sha256": "65e8de056153fdf43d82e37043327fcd0892a83a2c56183ec4f89ea26210aa3b"
     },
     {
-      "path": "assets/star-native/assets/RunView-C3Lh9BYC.js",
-      "size": 13306,
-      "sha256": "161d484aba85b8316b8654b0df02965ade62ac927aae0d9da4609b7288d3f95c"
+      "path": "assets/star-native/assets/RunView-GkLysg3-.js",
+      "size": 14880,
+      "sha256": "d194f2d307ba20a2e1be8ab8f5cea65db838baab1164881012e6bd272a05b370"
     },
     {
-      "path": "assets/star-native/assets/SettingsView-DQ9PkNyS.js",
-      "size": 11176,
-      "sha256": "fcf0c1610034d72223eef515828ee4e27a8563e75fc3714b11ca6bb4fa105448"
+      "path": "assets/star-native/assets/SettingsView-EKnsB4l7.js",
+      "size": 11592,
+      "sha256": "1f865138fb9a776469bfa3d9f39db93658e2434fb530c429b1f38b64ddf51f2a"
     },
     {
       "path": "assets/star-native/index.html",
       "size": 472,
-      "sha256": "9232486ab696feaf4da4bc249ceb5a8b22f6fbf4758cfe9c22ca2b4fe13d4c73"
+      "sha256": "222a2c7a6dda7ce4dcda10f42ff3ab32157df5446b3dcaa226394391425b5c36"
     },
     {
       "path": "assets/star-original.ico",
@@ -119,8 +129,8 @@
     },
     {
       "path": "fusion-install.json",
-      "size": 342,
-      "sha256": "fbb39067eef654febbf14dc45dac8373a39b12d5f8d28f415001f8701e1869bb"
+      "size": 343,
+      "sha256": "78c6ecc19988657fe3406a6effb2a46a38eefc1197dfc5353e3fb86d540125ba"
     },
     {
       "path": "LICENSE",
@@ -649,8 +659,8 @@
     },
     {
       "path": "ocs-lab/resources/app/lib/src/worker/index.js",
-      "size": 58683,
-      "sha256": "cc6eb0dc73501bb07df9686a08eb048de934789c7fc5dc46255014ca847b7c91"
+      "size": 59206,
+      "sha256": "470473938920cb6eed992fbcb8037ef14033ebe10f4fa02945a774b7c8737022"
     },
     {
       "path": "ocs-lab/resources/app/lib/types.js",
@@ -17120,7 +17130,7 @@
     {
       "path": "ocs-lab/resources/app/package.json",
       "size": 1061,
-      "sha256": "38002c057d5107e8e011a5584019c4d05bcd80c551101de3d4d76919b9a4c734"
+      "sha256": "ebc52c0848779e94b8e9711b7187b56a88f362c255402c75cb7bc3b4c92cd8d3"
     },
     {
       "path": "ocs-lab/resources/app/public/application-catalog.json",
@@ -17279,8 +17289,8 @@
     },
     {
       "path": "ocs-lab/resources/app/public/assets/index.c87a5b08.js",
-      "size": 203557,
-      "sha256": "2e165ea00c6a79fc1d2f91267d9a86277c6a12091b15cf38d99dba47b6f5b0e3"
+      "size": 203803,
+      "sha256": "5a5b6649800cacc65fc7a32a931460ddd35870c9f98e99db3a4ae21e1dfb8827"
     },
     {
       "path": "ocs-lab/resources/app/public/assets/index.ce0090a0.js",
@@ -17504,8 +17514,8 @@
     },
     {
       "path": "ocs-lab/resources/app/xingchan-lab-bootstrap.cjs",
-      "size": 38526,
-      "sha256": "1334fe6a1c366c8e33b78930502b876f5ed6f94b98df19d48aa19d40fe22b449"
+      "size": 41530,
+      "sha256": "a85845f5494bed1dc6f46f519862e9ac187c27e1c04befc4b16e8ebbdd9dd93f"
     },
     {
       "path": "ocs-lab/resources/bin/chrome/chrome/137.0.7151.55.manifest",
@@ -18260,7 +18270,7 @@
     {
       "path": "ocs-lab/XueBuTong.exe",
       "size": 199155200,
-      "sha256": "9695b5a2fc0fe25ec06e19235e954943312131743cba8c10763729d6bc1df002"
+      "sha256": "bfbc0f1c7727216b82d68e199956f9a6bdfdacd972fdfe591dede08796adc682"
     },
     {
       "path": "python3144/_asyncio.pyd",
@@ -18449,18 +18459,18 @@
     },
     {
       "path": "src/about-window.cjs",
-      "size": 4225,
-      "sha256": "e8216cdb9c945ebcc336e7b8401b81a67bd18ca9d5a037b7e804c422f11efa5d"
+      "size": 4541,
+      "sha256": "76f85272ce7f001b4046b87610b3818d212c14b912cff1a6ac9dadfb038a7310"
     },
     {
       "path": "src/account-checks-ui.css",
-      "size": 7309,
-      "sha256": "c500f136916a0a4f32c5db60be42db361f6117a52b8782330dde0d886e436d07"
+      "size": 7396,
+      "sha256": "54803bbeade7dbb2e402bb898bd9aebd4927d2f8971930329ea0d4c77a3d6604"
     },
     {
       "path": "src/account-form.js",
-      "size": 33980,
-      "sha256": "8e7e235eb1be1481901e49be94c01e9f53546e989ba46d9d2025cc1e2dd7c273"
+      "size": 39647,
+      "sha256": "ffb5d3bb0a088ea66538e09bcd04bc43be8e6b8e82c5d61587c9fda0e67b2060"
     },
     {
       "path": "src/account-order.js",
@@ -18515,7 +18525,7 @@
     {
       "path": "src/application-settings.cjs",
       "size": 12844,
-      "sha256": "74280bf14494ad917242da74445c0e2c0099d358ea704d959fc0aa776c460813"
+      "sha256": "bc520391b139215a52958524e3d2abc589a41275b2bbfdf2b72d8ac4041f1f17"
     },
     {
       "path": "src/application-ui.css",
@@ -18574,8 +18584,8 @@
     },
     {
       "path": "src/client-environment.js",
-      "size": 3255,
-      "sha256": "29925060b8fe26741ea1413da200066bc015ea01523d42f3ed07f82d16a661db"
+      "size": 3658,
+      "sha256": "ab3e32088ebcb39b69f6cfce4ac8dc3a89c22d54d32058aed6cae12edb13a105"
     },
     {
       "path": "src/config-merge.cjs",
@@ -18589,13 +18599,13 @@
     },
     {
       "path": "src/connection-checks.cjs",
-      "size": 10534,
-      "sha256": "ac452dba4841009c959425bfd0280a774b436917cb62a002b83d156560ad211e"
+      "size": 11808,
+      "sha256": "2c6272342475f502e99dd598acf515595407ddf01c75004e5e1a8c026efc684c"
     },
     {
       "path": "src/controller.cjs",
-      "size": 23737,
-      "sha256": "91f555d3ca49a661965ebaeb42085b76bd886f4ca55efb24ad184b494b4b7f03"
+      "size": 23906,
+      "sha256": "4d35e70f69971deb73907a2a7b90ce92eefa0e63e7abe1ce06175a9b07f4ef40"
     },
     {
       "path": "src/course_completion.py",
@@ -18608,6 +18618,11 @@
       "sha256": "1afd001f33cb02ef27e8b4e52c824e6f8183b968de1cc3f29abe5ab5a10a3feb"
     },
     {
+      "path": "src/course_watch.py",
+      "size": 18697,
+      "sha256": "983975fd291e8e59bad44e705f6817108ee525476fb3684602b3c9fee5cb5b8c"
+    },
+    {
       "path": "src/credential-sync.js",
       "size": 4247,
       "sha256": "060acb9b34656e8bd7260d8f9673a883b07bfbf174b3c3354b6581d1a31a37b0"
@@ -18615,12 +18630,17 @@
     {
       "path": "src/default-components.cjs",
       "size": 9028,
-      "sha256": "21cda6f982c6bd4c7a408d64b49fca826582cf162b7f0f06000a0ea98d705670"
+      "sha256": "e47ceee587d272a4f4901d2e03e4abbd2b4cc4436506db5e0343ea3fc09b4084"
+    },
+    {
+      "path": "src/device-profile-import.cjs",
+      "size": 4415,
+      "sha256": "a81c8ed62dbc841550ea31a72e4d5e24b2223a42aec6af4836f25f4d7b84bcc7"
     },
     {
       "path": "src/dialogs.css",
-      "size": 9006,
-      "sha256": "98ea99eafe322a647097aaa472cb9a3acb0a749c3ef927292177f505c0b41ef6"
+      "size": 9612,
+      "sha256": "55cbb5d0ba5a68f87362b09b3dd30f1db0bbd6dc749b3f49059724d1fe800bf8"
     },
     {
       "path": "src/dialogs.js",
@@ -18629,8 +18649,8 @@
     },
     {
       "path": "src/electron-bootstrap.cjs",
-      "size": 38526,
-      "sha256": "1334fe6a1c366c8e33b78930502b876f5ed6f94b98df19d48aa19d40fe22b449"
+      "size": 41530,
+      "sha256": "a85845f5494bed1dc6f46f519862e9ac187c27e1c04befc4b16e8ebbdd9dd93f"
     },
     {
       "path": "src/enrollment-year.js",
@@ -18659,8 +18679,8 @@
     },
     {
       "path": "src/github-updates.cjs",
-      "size": 7154,
-      "sha256": "b198b27d88deb8ac7afb3f3486e8ae17f79fc70df6655414b61273d1a27cfa60"
+      "size": 7233,
+      "sha256": "0518cedf2742da5f4b5fe309f15157b20191ccefc114c6e6fe0b5015c1ae8e86"
     },
     {
       "path": "src/homework_catalog.py",
@@ -18704,8 +18724,8 @@
     },
     {
       "path": "src/live-controller.cjs",
-      "size": 18374,
-      "sha256": "c18f5524c77ea8be3a8cfd64553b2890c70290796185e464a5d35f0783f99448"
+      "size": 19162,
+      "sha256": "94fb4b62a5788ccf8d2d0434268f3f9b1720548629b7980519f001a9843e2e5b"
     },
     {
       "path": "src/login-api.cjs",
@@ -18765,7 +18785,7 @@
     {
       "path": "src/ocs-plugin-manager.cjs",
       "size": 11252,
-      "sha256": "9427b234d454f860c185e57b0b8b302aebd98e239e15e993174e3bf48fae9b67"
+      "sha256": "b28af5d569e08d375f4448a38cb2d6c66ba333ff371fef47d5793b7bbf4a1e8a"
     },
     {
       "path": "src/ocs-plugins-ui.js",
@@ -18779,8 +18799,8 @@
     },
     {
       "path": "src/ocs-ui/renderer.js",
-      "size": 35263,
-      "sha256": "7f83715f49421436d19f2c2ddb11355cb88d84526e5983a2788fdbb42db1b542"
+      "size": 35394,
+      "sha256": "a1a0436009160573caea28d3e48892da6c25b925efebc81eabffda4fced1e379"
     },
     {
       "path": "src/ocs-wrapper-adapter.cjs",
@@ -18799,8 +18819,8 @@
     },
     {
       "path": "src/provider-config-ui.js",
-      "size": 14481,
-      "sha256": "d2964e171a8115369ccdccf7ca1a64e63458cb17fcf31310a3561f3b39b60146"
+      "size": 14511,
+      "sha256": "6e79390a6be384e0906e3906e29ff5a14d55cb58e16ff82dc87c52fa2251ac1d"
     },
     {
       "path": "src/question-bank-config.js",
@@ -18819,8 +18839,28 @@
     },
     {
       "path": "src/search-methods.cjs",
-      "size": 1043,
-      "sha256": "5fb2e63766dace7e8dc5aca6ef56f19b4cd66cfa88a8afe92d8a9ac1f254e786"
+      "size": 1111,
+      "sha256": "f0462c28582372e1a147724748bb105552e0452dcb2e80f5d7ab3d3135cbd10e"
+    },
+    {
+      "path": "src/session-guard-browser.cjs",
+      "size": 2392,
+      "sha256": "f4bd84a72352c16c189cee9a64b843a523b2b2cf593535dcad0034b898458303"
+    },
+    {
+      "path": "src/session-guard-ui.js",
+      "size": 1192,
+      "sha256": "8f8ad5b349b3ee7ff01126a678af9463b350c9f46a6d821e9ef9a543664bc4a9"
+    },
+    {
+      "path": "src/session-guard-window.cjs",
+      "size": 690,
+      "sha256": "28512c21f71361f1e57245f1d9df2bceaa9bf7996360aa91b129c2b5485ea514"
+    },
+    {
+      "path": "src/session-guard.cjs",
+      "size": 5610,
+      "sha256": "1f82f12d38f4d248856ad8729b870559908d4db50fbbfa9b3606844a9121b8e6"
     },
     {
       "path": "src/sidebar-ui.js",
@@ -18829,8 +18869,8 @@
     },
     {
       "path": "src/soutijiang-accounts.cjs",
-      "size": 752,
-      "sha256": "f4313c17d0d83a1fe4f13bdecca25053bdac0d87d7df821369f6b5f52642353f"
+      "size": 1156,
+      "sha256": "1ebc115a8e55547d3feee6f3bdb296b484e510b90a94bb5a898e720257680c13"
     },
     {
       "path": "src/soutijiang-auth.cjs",
@@ -18849,13 +18889,13 @@
     },
     {
       "path": "src/soutijiang-pool.cjs",
-      "size": 18266,
-      "sha256": "bf05d44726d2ee2aa2fef0a4c5edb6ec2e2c9a3735daeadb1e2d21ff035924d4"
+      "size": 19673,
+      "sha256": "5542b5f2fd9c8ce46cc675283e47d6a938b9b0c02bc7797980f9ab60c32a8a00"
     },
     {
       "path": "src/soutijiang-ui.js",
-      "size": 8327,
-      "sha256": "22e9699a0cf2f2feb3036b40eb7eb63b3ae5f23c20e81af1d074b810a001fe19"
+      "size": 12329,
+      "sha256": "9507b3408536a5acb31a8fdbfb1c026fd9abeae8b3c28eab4dccf07169121e7f"
     },
     {
       "path": "src/soutijiang.cjs",
@@ -18904,8 +18944,8 @@
     },
     {
       "path": "src/upstream_updates.py",
-      "size": 6294,
-      "sha256": "52b727fb64c8c4731606e3039fb9281852ebb75d0827526a20748804d3f299d4"
+      "size": 6657,
+      "sha256": "8f1a876b3546f996aec9107646fcd576c379c5bee6fd3bf20ee4b0a5bdef81be"
     },
     {
       "path": "src/version-ui.js",
@@ -18934,8 +18974,8 @@
     },
     {
       "path": "src/workspace-ui.js",
-      "size": 38131,
-      "sha256": "dd2f29872044a03bb33f49540d56aae47bcdb0713ad374bbec863701171f0e79"
+      "size": 38133,
+      "sha256": "a6787595409dd6603f717ff2fcfab690f793d138e4e6b360318dab1a6fd6efe1"
     },
     {
       "path": "src/yanxi/adapter.cjs",
@@ -18989,8 +19029,8 @@
     },
     {
       "path": "star-runtime/_backend-prepared-manifest.json",
-      "size": 767919,
-      "sha256": "9dba24e23186db8a8ad25e487837e6cd1920497d62f0fb1a6c2191b0bac26e85"
+      "size": 754461,
+      "sha256": "bb509e8d4ac03fa03021b9c0f843f6e7e4bb3f6559e768990fa9843afa035f4e"
     },
     {
       "path": "star-runtime/_brotli.cp314-win_amd64.pyd",
@@ -24475,7 +24515,7 @@
     {
       "path": "star-runtime/base_library.zip",
       "size": 1388172,
-      "sha256": "3294eb1638b5f20c997fe086cd650b1354d842eade6d6d3d477a954bb8819204"
+      "sha256": "8239bf6ca44362212d1224f46efaad15c8135ea34a626e2e0e5ceb0a5da7b9f9"
     },
     {
       "path": "star-runtime/bdb.pyc",
@@ -25000,7 +25040,7 @@
     {
       "path": "star-runtime/core/__init__.pyc",
       "size": 504,
-      "sha256": "d5ce3470c66fe77ea3f089d94844efa494176a6e72b8ef3d149eab8354853a08"
+      "sha256": "463e85ac6b176854ff5e41594c8d0503657868196df2ad380022bed04db62321"
     },
     {
       "path": "star-runtime/core/antispider.pyc",
@@ -25010,112 +25050,112 @@
     {
       "path": "star-runtime/core/auth.pyc",
       "size": 21159,
-      "sha256": "c4519d00e25371c755d18cea77d0e2a078e7d7b905ca360efab81d3d47c771e3"
+      "sha256": "91935d3aa13ca2eecd5c4285a7103c5a30c2cf353152c51f91191f18901191dd"
     },
     {
       "path": "star-runtime/core/build_info.pyc",
       "size": 5912,
-      "sha256": "d927a2f179aee3dd95b139f6279c1e90d119fbf3f02572e093b207791db4946b"
+      "sha256": "c60bcfc118820fc5e132f5f0c08cd174544c47497158a95d9aa3b3581fe8f288"
     },
     {
       "path": "star-runtime/core/config.pyc",
       "size": 17558,
-      "sha256": "bccf978eedee193edfc59745d9591339f3b10c78752149f630160a865880ded9"
+      "sha256": "0fbe11ab6814a367469b191a95a068fbba7bbbc83fc8923e8546ba507ea4aa68"
     },
     {
       "path": "star-runtime/core/course.pyc",
       "size": 7053,
-      "sha256": "670939a83c4d1be15e784a02723b897af0f7e18a1b7ee72fa189dd66e1af606b"
+      "sha256": "0fa79d2ede787345ff5c78bbcd821e16a0bb85ce7e5a7f18337151c018f1cf7b"
     },
     {
       "path": "star-runtime/core/course_status.pyc",
       "size": 16927,
-      "sha256": "cb744ff0010a314808a5dc0e1040731c80be9758986012a62912f756a50545ee"
+      "sha256": "ae6b53047131b0625ef9ff39caae029b9ce12878e831bb072cc6f809186dc3f1"
     },
     {
       "path": "star-runtime/core/curl.pyc",
-      "size": 9913,
-      "sha256": "2aa0333d7f366d5529534826e67cc6e92e20d1c3b464bb161214ad63d11010de"
+      "size": 9931,
+      "sha256": "3e0564f2db34b8c9710d3ad8f0dff945b6664b7b886e97ad73e288b6d00c01c5"
     },
     {
       "path": "star-runtime/core/diffjson.pyc",
       "size": 14609,
-      "sha256": "49e73429826854f35d6d32541b5249c9f38f897e03e2f7ceb8f630603ac75bdc"
+      "sha256": "7c4c5869c71a524a188ff704240072a200cfa3b431bf31fa3fa0ecdf076d75f8"
     },
     {
       "path": "star-runtime/core/face.pyc",
       "size": 48762,
-      "sha256": "d7e5a2bb552f7190b829e8b829f3b42dc1271630e254e09c7508cb77f19e35b6"
+      "sha256": "49e716b983b00176a819bd09c8b7ea0a4271155a74443674f11ec4fb4709a996"
     },
     {
       "path": "star-runtime/core/face_pc.pyc",
-      "size": 44278,
-      "sha256": "bce5f6c04dc641de7a435e1eca15efa2c83324d6acf267d33cb5ac281504a6b8"
+      "size": 44194,
+      "sha256": "0d3feb3fd9dd84857243619dd216d3dd3d8df0cf16474d82110eb20497b63fb6"
     },
     {
       "path": "star-runtime/core/face_photo.pyc",
       "size": 23565,
-      "sha256": "6c87d31e590d21c44a66fcb822f2022bd7979d0b7be5b04c9002ad788f92a2ff"
+      "sha256": "4ad60104d83a86d2549f375846b9a93416da846a45abbba5277b97233e142915"
     },
     {
       "path": "star-runtime/core/homework.pyc",
-      "size": 37139,
-      "sha256": "1e7ef6affbb119b930c96840699f995d1b3b183ff570eaa54822c5fb50ca1a3d"
+      "size": 56709,
+      "sha256": "8e589c647227a27f6ecb6dcc09148eae7b92fcf40c4b8137a9fb5c3e97323f76"
     },
     {
       "path": "star-runtime/core/log.pyc",
       "size": 23301,
-      "sha256": "bfed91181e209a59207b812fba9eb33eea4b2f19c17860e929bc8c84645d5a8e"
+      "sha256": "5f7725cf15381bcdf9d74540adda557d21aa3d631508f38ac493ba315c970f51"
     },
     {
       "path": "star-runtime/core/models.pyc",
       "size": 9970,
-      "sha256": "1b0cf245b9900155975acd3d88e3a2f78786936ed15bc1221d3112a74744bed0"
+      "sha256": "87f3b942f51601de0270c5ba4e592b1d9f8fa815402dcd828652bb8ecdfd6cba"
     },
     {
       "path": "star-runtime/core/obf.pyc",
-      "size": 5570,
-      "sha256": "25fb91a1e84e500ff380b2eb873c4971e112631f28a1c88d71443f12998bc609"
+      "size": 5585,
+      "sha256": "9fbe6412fe4152be766ff5177a5a40aa03513aa5f721c4b657432b07ddf06a41"
     },
     {
       "path": "star-runtime/core/other_tasks.pyc",
-      "size": 55942,
-      "sha256": "9ed0368048d0655448b0d25cd9f16e08e81513ac6464c56a4008ebf8c4181d75"
+      "size": 56122,
+      "sha256": "e74568b2f040f8687c7c1af4080421f190dae80e2a7cca94abc2f3fa3fc1cc25"
     },
     {
       "path": "star-runtime/core/paper.pyc",
       "size": 15869,
-      "sha256": "09111977d6817a6732cf649913b35fad23a07aed6148d11f72179c4d716717b9"
+      "sha256": "923ce1c6f27f6c702815f9d10c100659a92213068dda86c56da1d4eb9956e2f1"
     },
     {
       "path": "star-runtime/core/parser.pyc",
-      "size": 33918,
-      "sha256": "7aa0c4353f9f1697d0c783c76bcd7f9e89cba3f2c0306f057bd39726de42bdf1"
+      "size": 33849,
+      "sha256": "60355cd07c68ea5f81055e532885b98a2489cd8a5661c0a1c448a82304127097"
     },
     {
       "path": "star-runtime/core/paths.pyc",
       "size": 10610,
-      "sha256": "f935d60bd51d2252be55f66f872183cf39a7dfa148b074972f3242e83402e956"
+      "sha256": "daea36f3b3b955620996c5c3f3f9cfbcd92227f2a061e37464ef21f501204ac4"
     },
     {
       "path": "star-runtime/core/pause.pyc",
-      "size": 9419,
-      "sha256": "bb34fd396cd0fe1bc48c18f949e52ab6121af9e958540da44dbf74c7b62910f9"
+      "size": 9395,
+      "sha256": "89930d503625eb68c0948e91b7c3095c9ce71abf6232d64e89e1d8c8bda1a535"
     },
     {
       "path": "star-runtime/core/pipeline.pyc",
       "size": 24136,
-      "sha256": "cbac945b51e97f056a946af8752688ef73a21a30ed19af5eebf66b36cb7c02e5"
+      "sha256": "d683d3b4130cb0452aecd454c7120e032cb54698fb475028dd5209863b1d8171"
     },
     {
       "path": "star-runtime/core/protect.pyc",
       "size": 37858,
-      "sha256": "82021bb963f36aac35e39671a9d74ef7e900a5550839902e062ea20980ea3a68"
+      "sha256": "795d74b1bbdd8ae39e15072f9b317aaa419c4ede1dc853c9e4640f03c963e4dc"
     },
     {
       "path": "star-runtime/core/question_bank/__init__.pyc",
-      "size": 2344,
-      "sha256": "83668bdf9fd4bd20ad9fc9dff8fac4b8dff19efe3c2a1c52ab8caaaad26c1a52"
+      "size": 2367,
+      "sha256": "39d4d9441f41fe825b5214e36ac907f192afa48a4729f859632b96c8786742c0"
     },
     {
       "path": "star-runtime/core/question_bank/ai.pyc",
@@ -25125,57 +25165,57 @@
     {
       "path": "star-runtime/core/question_bank/base.pyc",
       "size": 14332,
-      "sha256": "34e971a6aee77c979968f77694a6d83e046b62a59c6d693896484f91bfb8688c"
+      "sha256": "6af5fe1ac5e747f8b9bcacb97273bbe6643a3853314978cfd05ef95c74fe8534"
     },
     {
       "path": "star-runtime/core/question_bank/cache.pyc",
       "size": 27378,
-      "sha256": "2ee540417bb6cf7ff4584d72d4ab60148f322bb1e682633d3a299903acb35f94"
+      "sha256": "c31e54b9765b92e174a43926216ca739df50a40fdf2b02377bcc728219a920bb"
     },
     {
       "path": "star-runtime/core/question_bank/chain.pyc",
       "size": 10798,
-      "sha256": "8ea42c9c38e110bba0d085e51f12b8f5880bd7bc56cdbb0c9839c120c9024fb6"
+      "sha256": "8c40e43f6ac45d4fe4c733bc07bb7bb92df45116a5230948fd49a468fc0e3e34"
     },
     {
       "path": "star-runtime/core/question_bank/demo.pyc",
       "size": 7791,
-      "sha256": "3c4ceb22d7cde8a810b61af3e9a3f326ad630593b92218f4a2fe0ffd31ed5019"
+      "sha256": "bb169cfc6c4f0064e52460f38fe96865e9f8266010db580205b35c4493d0b35d"
     },
     {
       "path": "star-runtime/core/question_bank/exceptions.pyc",
-      "size": 2304,
-      "sha256": "0b0f3e0074db29f64a81f151ef362d3f40b9e8ca9f4010f72a976c0aa0a3107f"
+      "size": 2307,
+      "sha256": "03c495a2582f00b6602d60201cd0f21fd5c3d53752141d9c4fc9901626af8247"
     },
     {
       "path": "star-runtime/core/question_bank/models.pyc",
       "size": 8777,
-      "sha256": "3e983c149f778b0268e003a9a4d711385208767c628365767986a897cf9608d7"
+      "sha256": "c3cb957181c5bc783c7ae1e1333bf957b25da6d7b613f90d57ad98d35165fe5c"
     },
     {
       "path": "star-runtime/core/question_bank/registry.pyc",
-      "size": 12812,
-      "sha256": "160df56095a0091e606daafa933252ad22eb70a61d070629d70b0dcc116a4830"
+      "size": 13742,
+      "sha256": "709bcc443c2bde0c9a7f32aed4c5694613b59f234620092f91d7b1997b8f38bc"
     },
     {
       "path": "star-runtime/core/question_bank/tiku168.pyc",
       "size": 40258,
-      "sha256": "4791f9fb41b457811ce80e68e0a36357b627a2ee58e3c4a4234b6143ea7fa8d2"
+      "sha256": "bdeeb6dcdfd7cbbe68614cc8bdff1b4f86fcf6acad86b07bf71f4168dec98ece"
     },
     {
       "path": "star-runtime/core/question_bank/wanjuan.pyc",
-      "size": 10099,
-      "sha256": "1e89ea42735d7259593e7e18ae7dbae227f2f063ce580f310a508e7970a015d1"
+      "size": 10075,
+      "sha256": "f1b77a7123c28ddd17309e89053245ee98e8e592c7d58631cb8407ca68dd6784"
     },
     {
       "path": "star-runtime/core/scheduler.pyc",
-      "size": 36799,
-      "sha256": "aa9249d25db5b43640ecadc54d98ff08693e82b05e9d1671050176683e5cc42d"
+      "size": 44324,
+      "sha256": "e65f64db69be3dc71c3c01da8d7e4346dc7e87d23c617de54c9f6542335adac1"
     },
     {
       "path": "star-runtime/core/storage.pyc",
-      "size": 13931,
-      "sha256": "145a74b495035fb011ede2985b914ffc0a25a56ef582b3241d2a1c71494d00e1"
+      "size": 14066,
+      "sha256": "176675bddd5162cc33b95eb498eb57bd49b524923323284171978336863c26ed"
     },
     {
       "path": "star-runtime/core/taskpoint.pyc",
@@ -25185,27 +25225,27 @@
     {
       "path": "star-runtime/core/ua.pyc",
       "size": 12980,
-      "sha256": "8b6957265069a50195ff1fb6146cb3917fb48b97ecdd566b3964d380110d6934"
+      "sha256": "e20d839cf288ddb99f6c7154b03daa4b9e3d22ac0c08676ab33e7196aea0767e"
     },
     {
       "path": "star-runtime/core/verbose.pyc",
       "size": 10287,
-      "sha256": "726b30cb1c10a5cf06e5b6d1296d3804425144c65d0b814fd65372c6fae5e81e"
+      "sha256": "35330c3224236f91c3b3295bd4ab0229ae9ac74204b67f419f4e56060454f135"
     },
     {
       "path": "star-runtime/core/version.pyc",
-      "size": 59612,
-      "sha256": "02f6b6428ef152b2d9d5f061768ba3980dae20c4761d229799de0c2f15608a55"
+      "size": 62284,
+      "sha256": "b753094762e51261c59d88199a63988d2ee2d9556f6bbee36b77119b27baf98e"
     },
     {
       "path": "star-runtime/core/video.pyc",
-      "size": 51825,
-      "sha256": "ad277f775a533132680ce1d71dba630072fe2174e3d5bcd4b9699d3a0af2cdc6"
+      "size": 51933,
+      "sha256": "439cb1ed78485072c7273e31c3963bae6089a648500d37dee3f7451a6807faed"
     },
     {
       "path": "star-runtime/core/work.pyc",
-      "size": 64096,
-      "sha256": "e4724000f467824c5e583648414f299bb21f760faf05b1aa5a5260a2ecd10fec"
+      "size": 65987,
+      "sha256": "6b6124c95f5a2add4906ab796cf187f443c8420edd62dffbdbb60ffaa409458e"
     },
     {
       "path": "star-runtime/cryptography/__about__.pyc",
@@ -26255,22 +26295,22 @@
     {
       "path": "star-runtime/engine/__init__.pyc",
       "size": 438,
-      "sha256": "0dd1bdd1e0ce6bf6044d0aa0785117060d67a551ec7a1b0e89f01002429150f5"
+      "sha256": "0c062dae55b3eedf39041d2a230ecb36bf9255561614257afff90c46030fdf07"
     },
     {
       "path": "star-runtime/engine/app.pyc",
-      "size": 138513,
-      "sha256": "16aa8c3db444c4ecd6b5968c998c8cfadf05dff63f3a8515f927e3cdcc35b1e8"
+      "size": 139293,
+      "sha256": "15dacee8bb51a9cf274363f6efb4834eb7adbd6c2a49d31ea727cfddf219ec8c"
     },
     {
       "path": "star-runtime/engine/models.pyc",
       "size": 8184,
-      "sha256": "a73d801102046c08487f2c80ca590b681c125e3fb1a3c84ff2de807800d6abb9"
+      "sha256": "170f8855be95f287a916398aa0a5e77777fce33768043e1f8df24b40fdbc9a09"
     },
     {
       "path": "star-runtime/engine/unlock.pyc",
-      "size": 19221,
-      "sha256": "daf4f15f9d477d0d7f93cb99ea5a0013932915ae78b339a58375fe6263e234da"
+      "size": 19179,
+      "sha256": "c517d2e29e8bb777c98d34534832078b1485510fa533642f49abf153082bdb18"
     },
     {
       "path": "star-runtime/fastapi/__init__.pyc",
@@ -26890,17 +26930,17 @@
     {
       "path": "star-runtime/main.pyc",
       "size": 13155,
-      "sha256": "cd0a05870200fa372e657a680a87e0dbceaaabef7750701b3ebd13345affb6ad"
+      "sha256": "7a1e7a347ddf366db8655c037e007d913b948ed3ba50a61131996870cfbe4d4b"
     },
     {
       "path": "star-runtime/manager/__init__.pyc",
       "size": 439,
-      "sha256": "10e450984d8a807ace3572e1f6d65e8aad36920dc6a7e4034ea7533733eeab74"
+      "sha256": "7d0fe7fad12e87820ee9a927b45cd187b273bc1ad4ceb6802d2d3e10f6a47166"
     },
     {
       "path": "star-runtime/manager/selfcheck.pyc",
       "size": 21109,
-      "sha256": "dbff721bb0cdfb62631d173c6ed42538d3e0eb9eebd90a81394abc037ae00b51"
+      "sha256": "6835f1cb4799c0317719e63e74cbf45e9d10457e7f56ccea2c4000742198b0f0"
     },
     {
       "path": "star-runtime/manager/window.pyc",
@@ -28815,7 +28855,7 @@
     {
       "path": "star-runtime/pyarmor_runtime_000000/pyarmor_runtime.pyd",
       "size": 643072,
-      "sha256": "86323c54769242cca9788bee176f6c85a76b697cdd168b0bd2fd92a1c99b3dd1"
+      "sha256": "5657e33b95f634a2ad7e7af9e02b95ec7cb4228b1338b95ce257f6e8eac2e9f6"
     },
     {
       "path": "star-runtime/pydantic/__init__.pyc",
@@ -29499,8 +29539,8 @@
     },
     {
       "path": "star-runtime/PYZ.pyz",
-      "size": 12010037,
-      "sha256": "4fcd7132197257fe41f2394eaa9a0dbe8a113d6fbbbc0a186ee0ac299f8eb99b"
+      "size": 12043143,
+      "sha256": "daaf44ec5c00f6409cf57a2df0d235d434747d01ca172c16e171ea9d3c6cadba"
     },
     {
       "path": "star-runtime/queue.pyc",
@@ -29630,27 +29670,27 @@
     {
       "path": "star-runtime/server/__init__.pyc",
       "size": 438,
-      "sha256": "c7ae00b8a886b9dbebf36517ed196f3b35b44d0087d2f5d12e0ed8b6091b5c37"
+      "sha256": "ddd7480797ffa9ecf8d71c8799e62a89d1031ea9f6570f22335173bac808c430"
     },
     {
       "path": "star-runtime/server/app.pyc",
       "size": 11888,
-      "sha256": "f352af90713ad78b12a5e424cabcf37b3bf8f0fecd4dffc0c19886d239c6bca9"
+      "sha256": "9200bb2d4642440c2631c70218da6b88fa98624100c20584a8a02f348335b2d8"
     },
     {
       "path": "star-runtime/server/events.pyc",
       "size": 14134,
-      "sha256": "0bc0807db1a32d5777eaf92ce8fb6c49d185105abfe9d819d8c11368c3f4a425"
+      "sha256": "9f5f211ef3e1006fcd166ecc57ad6eb295cce5ca23aba555e3d9cb32207ddae4"
     },
     {
       "path": "star-runtime/server/routes.pyc",
-      "size": 60648,
-      "sha256": "ef5752e7259498e27dcd6a5341a8b5332d0f44bf7525599544f59f2604d3a527"
+      "size": 62115,
+      "sha256": "59e47661354cef6e2ca0bd5ddd67143285ebe7f7920980e6c2b8b02160c56fec"
     },
     {
       "path": "star-runtime/server/security.pyc",
       "size": 5522,
-      "sha256": "2be4f80c2a01a54c6f8b7a4688752b2bf0157f1dcc2f91dd630bd8ad9d0cfe79"
+      "sha256": "3103d971c40843488c28efe315725f1136f38187f93305f66807553e3cac0cad"
     },
     {
       "path": "star-runtime/setuptools/__init__.pyc",
@@ -34314,8 +34354,38 @@
     },
     {
       "path": "star-runtime/web/dist/app.js",
-      "size": 90524,
-      "sha256": "73b07b1ee6aea99e24c1da7673b5ff28c7f4def333633526f396076e7fa39374"
+      "size": 91367,
+      "sha256": "2107f67ef19bd32a56e4f24d9656fd04024ea5b97c7d64cd0f148841648b0bc6"
+    },
+    {
+      "path": "star-runtime/web/dist/assets/HomeView-BAgp7oMc.js",
+      "size": 9246,
+      "sha256": "e75e7ddd6d6a24479ea8803e56b528c2b59cd9d79bc326277e455faef67800cf"
+    },
+    {
+      "path": "star-runtime/web/dist/assets/index-BjG3p18M.css",
+      "size": 18791,
+      "sha256": "3d710263a4181e936bb84e755fb6dcdb7975605c87ef0ac9c3f16c4fc7c40ab2"
+    },
+    {
+      "path": "star-runtime/web/dist/assets/index-DISd9wYt.js",
+      "size": 115027,
+      "sha256": "7ccd51ace1a8f92ee9219b983eed1de9b376bf1d4e5f57e6ec8ff1fbaeaa816e"
+    },
+    {
+      "path": "star-runtime/web/dist/assets/LoginView-BJQftBFz.js",
+      "size": 2512,
+      "sha256": "65e8de056153fdf43d82e37043327fcd0892a83a2c56183ec4f89ea26210aa3b"
+    },
+    {
+      "path": "star-runtime/web/dist/assets/RunView-GkLysg3-.js",
+      "size": 14880,
+      "sha256": "d194f2d307ba20a2e1be8ab8f5cea65db838baab1164881012e6bd272a05b370"
+    },
+    {
+      "path": "star-runtime/web/dist/assets/SettingsView-EKnsB4l7.js",
+      "size": 11592,
+      "sha256": "1f865138fb9a776469bfa3d9f39db93658e2434fb530c429b1f38b64ddf51f2a"
     },
     {
       "path": "star-runtime/web/dist/course-completion.js",
@@ -34328,14 +34398,19 @@
       "sha256": "0088fb5c466bd60ba59dfa3c5dbd4c1de4c32ee633445ed08b7f2e4d81891587"
     },
     {
+      "path": "star-runtime/web/dist/course-watch.js",
+      "size": 6826,
+      "sha256": "b4b57f425a35ba9d2229b9705b91ab55439b1e17eae164509281ad6f11ba4b6c"
+    },
+    {
       "path": "star-runtime/web/dist/fusion.ico",
       "size": 111053,
       "sha256": "f03198e010d03692562a12ee5df733e47983294e0186cc6f3db8bdbe9a6c90cb"
     },
     {
       "path": "star-runtime/web/dist/index.html",
-      "size": 16881,
-      "sha256": "c3a579e6c8d37fd0dfc6ba382c937d773dad9106de3741557384180204df4eea"
+      "size": 17058,
+      "sha256": "47badfe64184c75d6da73a922ee0c9bf3113a436d77dffc7723ce564ceba9a0b"
     },
     {
       "path": "star-runtime/web/dist/panel-layout.js",
@@ -34349,8 +34424,8 @@
     },
     {
       "path": "star-runtime/web/dist/styles.css",
-      "size": 26468,
-      "sha256": "a2aa439b121b8e2e1f72a53c265582f97dfe8aed5b7aaa45488894ebbd9c91e2"
+      "size": 27514,
+      "sha256": "4d7eadec545be20fa262037f5ebf78ff48a4751aaa4b171b87399700e14d705b"
     },
     {
       "path": "star-runtime/web/dist/task-state.js",
@@ -35144,8 +35219,8 @@
     },
     {
       "path": "tools/account_environment.py",
-      "size": 12107,
-      "sha256": "a1b73c6a1f633c43bd39179f1e433a7864002295e7d3aea6d3f4742030e11d5c"
+      "size": 12936,
+      "sha256": "24f96e2b50e7bebb68796ec89e54f79a48cfd63386af8a41c35aa8c623b48eb4"
     },
     {
       "path": "tools/browser-window-guard.exe",
@@ -35184,8 +35259,13 @@
     },
     {
       "path": "tools/run_integrated_backend.py",
-      "size": 27805,
-      "sha256": "8437c7e407a856aa2ee0b57f15cef12a43024cf2073b28272717bf444ecbf6df"
+      "size": 29919,
+      "sha256": "49d7efaf450a4121cc1195f77035848e051250ee41ffc4fb3e89065f5e617bb4"
+    },
+    {
+      "path": "tools/session_guard.py",
+      "size": 7084,
+      "sha256": "63b0419159c0ed5ade35637912c9ca2921d3c480c2d9ed89ac229f37260345d8"
     },
     {
       "path": "tools/start-fusion.ps1",
@@ -35205,28 +35285,29 @@
     {
       "path": "学不通.exe",
       "size": 118784,
-      "sha256": "ac21db74a4a07221d18ce702dba4179cb4366ae3a860d448d4258b57e26ec879"
+      "sha256": "deadb9d4ea067d7e97037ead84be7b890eb62f28fc908e488f99e11ed77da6d4"
     }
   ],
-  "fileCount": 7041,
-  "totalBytes": 1122793784,
+  "fileCount": 7057,
+  "totalBytes": 1123395080,
   "privacy": {
     "policyVersion": 1,
-    "fileCount": 7041,
-    "bytesScanned": 1122793784,
+    "fileCount": 7057,
+    "bytesScanned": 1123395080,
     "archiveMembersScanned": 2051,
-    "archiveExpandedBytes": 39793784,
+    "archiveExpandedBytes": 39828858,
     "knownValuesSupplied": 0,
     "findings": [],
     "passed": true
   },
-  "runtimeFilesVerified": 3235,
+  "runtimeFilesVerified": 3242,
   "pythonSourceParsed": [
     "answer_confirmation.py",
     "answer_policy.py",
     "antispider_recovery.py",
     "course_completion.py",
     "course_metadata.py",
+    "course_watch.py",
     "homework_catalog.py",
     "integration_controls.py",
     "integration_state.py",
@@ -35242,21 +35323,22 @@
     "network_policy.py",
     "read_runtime_info.py",
     "run_integrated_backend.py",
+    "session_guard.py",
     "websocket_lifecycle.py"
   ],
   "executableIdentity": {
     "学不通.exe": {
       "FileDescription": "学不通",
       "ProductName": "学不通",
-      "FileVersion": "2.5.12.0",
-      "ProductVersion": "2.5.12.0",
+      "FileVersion": "2.5.13.0",
+      "ProductVersion": "2.5.13.0",
       "OriginalFilename": "学不通.exe"
     },
     "ocs-lab/XueBuTong.exe": {
       "FileDescription": "学不通",
       "ProductName": "学不通",
-      "FileVersion": "2.5.12.0",
-      "ProductVersion": "2.5.12.0",
+      "FileVersion": "2.5.13.0",
+      "ProductVersion": "2.5.13.0",
       "OriginalFilename": "XueBuTong.exe"
     }
   },

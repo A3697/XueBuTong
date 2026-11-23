@@ -125,7 +125,14 @@ class ScriptWorker {
             /** 启动浏览器 */
             try {
                 options.userDataDir=require(path_1.default.join(this.fusionRoot,'src/browser-profile-isolation.cjs')).prepareBrowserProfile({uid:this.uid,cacheRoot:this.store?.paths?.userDataDirsFolder,profilePath:options.userDataDir,userDataRoot:this.store?.paths?.['user-data-path']});
-                yield launchBrowser(Object.assign({ onCreated: browser => { this.browser=browser;if(this.closing){void browser.close();throw Error("浏览器启动已取消");} }, onLaunch: (browser) => {
+                yield launchBrowser(Object.assign({ onCreated: browser => {
+                    this.browser=browser;if(this.closing){void browser.close();throw Error("浏览器启动已取消");}
+                    browser.__fusionSessionGuard=require(path_1.default.join(this.fusionRoot,'src/session-guard-browser.cjs')).observe(browser,{onDisplaced:signal=>{
+                        try{send('session-displaced',signal);}catch{}this.closing=true;
+                        // Close the account context immediately, before auxiliary teardown.
+                        void browser.close().catch(()=>{});void this.close();
+                    }});
+                }, onLaunch: (browser) => {
                         var _a;
                         this.browser = browser;
                         /** URL事件解析器 */
@@ -193,7 +200,7 @@ class ScriptWorker {
             const deadline=setTimeout(()=>process.exit(1),8000);
             const browser=this.browser;
             try {
-                for(const helper of [browser?.__fusionSoutijiang,browser?.__fusionWindowSize,browser?.__fusionLocalPort,browser?.__fusionWindowGuard]){
+                for(const helper of [browser?.__fusionSessionGuard,browser?.__fusionSoutijiang,browser?.__fusionWindowSize,browser?.__fusionLocalPort,browser?.__fusionWindowGuard]){
                     try{await helper?.dispose();}catch(error){console.warn('浏览器辅助组件关闭未完成。');}
                 }
                 await browser?.close();

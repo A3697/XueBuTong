@@ -153,6 +153,8 @@ class IntegrationController {
     const passwordChange=secretUpdates.password;
     const nextPassword=passwordChange?.action==='set'?passwordChange.value:passwordChange?.action==='clear'?'':this.plainSecret(uid,'password');
     if(p.username!==original.username||p.schoolId!==original.schoolId||nextPassword!==this.plainSecret(uid,'password')){p.displayName='';p.nameSource='';}
+    p.searchMethods=normalizeSearchMethods(p.searchMethods,p.questionStrategy);
+    p.questionStrategy=p.searchMethods[0].id==='xingchan-ai'?'ai-first':'yanxi-first';
     p.revision++; this.data.profiles[uid] = p;
     try{this.persist();}catch(error){this.data.profiles[uid]=original;throw error;}
     // A running gateway owns a snapshot of its bank adapters and credentials.

@@ -25,7 +25,7 @@ test('legacy profile is retained and each additional login has a distinct owner-
 });
 test('remarks and order are persisted as portable descriptors, without credentials',async t=>{
  const f=fixture(t);const second=await f.add('A','two');await f.pool.change('A',{action:'rename',id:second,remark:'我的备用'});await f.pool.change('A',{action:'reorder',order:[second,'default']});
- assert.deepEqual(f.profiles.A.soutijiangAccounts.items,[{id:second,remark:'我的备用'},{id:'default',remark:''}]);assert(!JSON.stringify(f.profiles).includes('private-'));
+ assert.deepEqual(f.profiles.A.soutijiangAccounts.items,[{id:second,remark:'我的备用',enabled:true},{id:'default',remark:'',enabled:true}]);assert(!JSON.stringify(f.profiles).includes('private-'));
  assert.throws(()=>Accounts.normalize({items:[{id:'../other',remark:''}]}));await assert.rejects(f.pool.change('A',{action:'reorder',order:[second,second]}));
 });
 test('an answer stops at the first account and counts only the successful method',async t=>{
@@ -199,4 +199,98 @@ test('acknowledging the remaining login cannot unblock the removed credentials, 
  result=await pool.exchange(ticket.token,{snapshot:old.snapshot,revision:result.revision});assert.deepEqual(pool.view('A').accounts.map(row=>row.id),[second]);
  const fresh=login('one');fresh.storage.college_ai_dxuss='"new-post-ack-login"';fresh.cookies[0].value='new-post-ack-login';await pool.exchange(ticket.token,{snapshot:fresh,revision:result.revision});assert.equal(pool.view('A').accounts.length,2);assert.equal(pool.view('A').name,'用户 one');
  assert(!fs.readFileSync(pool.file,'utf8').includes('private-one'));assert(!fs.readFileSync(pool.file,'utf8').includes('new-post-ack-login'));assert(!JSON.stringify(f.profiles.A.soutijiangAccounts).includes('_removed'));
+});
+
+test('legacy account descriptors default to enabled and reject invalid switch/selection data',()=>{
+ assert.equal(Accounts.normalize().items[0].enabled,true);
+ assert.deepEqual(Accounts.normalize({items:[{id:'default',remark:'  legacy  '}]}),{items:[{id:'default',remark:'legacy',enabled:true}]});
+ for(const enabled of ['false',0,null])assert.throws(()=>Accounts.normalize({items:[{id:'default',remark:'',enabled}]}),/开关/);
+ assert.throws(()=>Accounts.normalize({items:[{id:'default',remark:''}],selectedId:'missing'}),/当前/);
+ assert.throws(()=>Accounts.normalize({items:[],selectedId:'default'}),/当前/);
+ assert.deepEqual(Accounts.normalize({items:[{id:'default',remark:'',enabled:false}],selectedId:'default'}),{items:[{id:'default',remark:'',enabled:false}],selectedId:'default'});
+});
+
+test('disabled bank accounts are skipped without consuming quota, while explicit plugin login remains usable',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');
+ await f.pool.change('A',{action:'select',id:'default'});await f.pool.change('A',{action:'set-enabled',id:'default',enabled:false});
+ assert.deepEqual(await f.pool.query('A',question),{kind:'hit',answer:'A'});assert.deepEqual(f.calls.map(row=>row.id),['two']);
+ const ticket=f.pool.ticket('A'),shared=await f.pool.exchange(ticket.token,{snapshot:empty(),revision:0});assert.equal(Auth.user(shared.snapshot).providerUid,'one');
+ assert.equal(f.pool.view('A').browserAccountId,'default');assert.equal(f.pool.view('A').accounts.find(row=>row.id==='default').enabled,false);assert.equal(f.pool.view('A').accounts.find(row=>row.id===second).enabled,true);
+ assert.equal(f.pool.definition('B').items[0].enabled,true);
+});
+
+test('manual plugin selection persists across reorder and restart without changing bank usage order',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');
+ const before=f.pool.definition('A').items.map(row=>row.id);await f.pool.change('A',{action:'select',id:second});assert.deepEqual(f.pool.definition('A').items.map(row=>row.id),before);
+ await f.pool.query('A',question);assert.equal(f.calls[0].id,'one');assert.equal(f.pool.view('A').browserAccountId,second);
+ await f.pool.change('A',{action:'reorder',order:[second,'default']});await f.pool.change('A',{action:'reorder',order:['default',second]});assert.equal(f.pool.view('A').browserAccountId,second);
+ await f.pool.dispose();const reopened=f.reload();assert.equal(reopened.view('A').browserAccountId,second);assert.equal(reopened.view('A').browserAccountExplicit,true);
+ const shared=await reopened.exchange(reopened.ticket('A').token,{snapshot:login('one'),revision:0});assert.equal(Auth.user(shared.snapshot).providerUid,'two');assert.equal(f.calls.length,1);
+});
+
+test('quota fallback cannot replace a manually fixed plugin account',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');await f.pool.change('A',{action:'select',id:'default'});
+ f.replies.set('one',[{message:{errNo:1},transport:{errstr:'今日截图搜题次数已耗尽'}},{errNo:4002}]);await f.pool.query('A',question);
+ assert.deepEqual(f.calls.map(row=>row.id),['one','one','two']);assert.equal(f.pool.view('A').browserAccountId,'default');assert.equal(f.pool.definition('A').selectedId,'default');
+ await f.pool.change('A',{action:'select',id:''});assert.equal(f.pool.view('A').browserAccountExplicit,false);assert.equal(f.pool.view('A').browserAccountId,second);
+});
+
+test('all bank slots disabled reports a configuration error without logging the plugin out',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});await f.pool.change('A',{action:'select',id:'default'});await f.pool.change('A',{action:'set-enabled',id:'default',enabled:false});
+ assert.equal(f.pool.configured('A'),false);await assert.rejects(f.pool.query('A',question),error=>error.code==='soutijiang_accounts_disabled');assert.equal(f.calls.length,0);
+ const shared=await f.pool.exchange(f.pool.ticket('A').token,{snapshot:empty(),revision:0});assert.equal(Auth.user(shared.snapshot).providerUid,'one');
+ await f.pool.change('A',{action:'set-enabled',id:'default',enabled:true});assert.equal(f.pool.configured('A'),true);await f.pool.query('A',question);assert.equal(f.calls.length,1);
+});
+
+test('set-enabled and select roll back cleanly on configuration save failure',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');await f.pool.change('A',{action:'select',id:'default'});
+ const before=JSON.stringify(f.profiles);f.pool.controller.persist=()=>{throw Error('synthetic disk full');};
+ await assert.rejects(f.pool.change('A',{action:'set-enabled',id:'default',enabled:false}),/disk full/);await assert.rejects(f.pool.change('A',{action:'select',id:second}),/disk full/);
+ assert.equal(JSON.stringify(f.profiles),before);assert.equal(f.pool.view('A').browserAccountId,'default');assert.equal(f.pool.configured('A'),true);
+});
+
+test('deleting the manually selected login removes its selector without affecting others',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');await f.pool.change('A',{action:'select',id:second});
+ await f.pool.change('A',{action:'remove',id:second});assert.equal(f.pool.definition('A').selectedId,undefined);assert.equal(f.pool.view('A').browserAccountId,'default');assert.equal(f.pool.view('A').accounts.length,1);
+ await assert.rejects(f.pool.change('B',{action:'select',id:'default'}),/先在题库配置中登录/);await assert.rejects(f.pool.change('A',{action:'select',id:second}),/不存在/);
+});
+
+test('old browser heartbeats cannot overwrite a new manual plugin selection',async t=>{
+ const f=fixture(t);f.seed('A','default','one');const second=await f.add('A','two'),ticket=f.pool.ticket('A');const first=await f.pool.exchange(ticket.token,{snapshot:empty(),revision:0});
+ await f.pool.change('A',{action:'select',id:second});const next=await f.pool.exchange(ticket.token,{snapshot:first.snapshot,revision:first.revision});
+ assert.equal(Auth.user(next.snapshot).providerUid,'two');assert.equal(Auth.user(f.auth.get(f.pool.profile('A','default'))).providerUid,'one');assert.equal(f.pool.definition('A').selectedId,second);
+});
+
+test('plugin selector summaries do not start sessions or disturb a different active bank slot',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');await f.pool.change('A',{action:'select',id:'default'});
+ const current=f.pool.current.get('A'),session=f.pool.sessions.get('A');assert.equal(current,second);
+ const view=await f.pool.state('A',{summaryOnly:true});assert.equal(view.browserAccountId,'default');assert.equal(f.pool.current.get('A'),current);assert.equal(f.pool.sessions.get('A'),session);assert.equal(session.closed(),false);assert.equal(f.calls.length,0);
+});
+
+test('bank connection selection ignores a disabled manual plugin account and does not change the plugin',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');await f.pool.change('A',{action:'select',id:'default'});await f.pool.change('A',{action:'set-enabled',id:'default',enabled:false});
+ const state=await f.pool.state('A',{refresh:true,connect:true,forBank:true});assert.equal(state.selectedId,second);assert.equal(state.loggedIn,true);assert.equal(state.browserAccountId,'default');assert.equal(f.calls.length,0);
+});
+
+test('disabled accounts are not fallback targets and verification still stops the enabled chain',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.add('A','two');const third=await f.add('A','three');await f.pool.change('A',{action:'set-enabled',id:'default',enabled:false});
+ f.replies.set('two',[{message:{errNo:410004}}]);await assert.rejects(f.pool.query('A',question),error=>error.code==='soutijiang_verification_required');assert.deepEqual(f.calls.map(row=>row.id),['two']);assert.equal(f.pool.view('A').accounts.find(row=>row.id===third).screenshotUsed,0);
+});
+
+test('bank connection identity changes for switches but not manual plugin choice or remarks',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two'),before=f.pool.view('A').connectionKey;
+ await f.pool.change('A',{action:'select',id:second});assert.equal(f.pool.view('A').connectionKey,before);await f.pool.change('A',{action:'rename',id:second,remark:'新的备注'});assert.equal(f.pool.view('A').connectionKey,before);
+ await f.pool.change('A',{action:'set-enabled',id:second,enabled:false});const disabled=f.pool.view('A').connectionKey;assert.notEqual(disabled,before);await f.pool.change('A',{action:'select',id:'default'});assert.equal(f.pool.view('A').connectionKey,disabled);await f.pool.change('A',{action:'set-enabled',id:second,enabled:true});assert.equal(f.pool.view('A').connectionKey,before);
+});
+
+test('a new official browser login is preserved as the users explicit plugin choice',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');await f.pool.change('A',{action:'select',id:'default'});const ticket=f.pool.ticket('A');
+ const first=await f.pool.exchange(ticket.token,{snapshot:empty(),revision:0});assert.equal(Auth.user(first.snapshot).providerUid,'one');const changed=await f.pool.exchange(ticket.token,{snapshot:login('two'),revision:first.revision});assert.equal(changed.slotId,second);assert.equal(f.pool.definition('A').selectedId,second);
+ assert.deepEqual(f.pool.definition('A').items.map(row=>row.id),['default',second]);await f.pool.query('A',question);assert.equal(f.calls[0].id,'one');const current=await f.pool.exchange(ticket.token,{snapshot:login('two'),revision:changed.revision});assert.equal(current.snapshot,null);assert.equal(current.slotId,second);
+});
+
+test('manual selection waits for an active query and survives its late completion',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');let resolve,started;const began=new Promise(done=>{started=done;});f.replies.set('one',[()=>{started();return new Promise(done=>{resolve=done;});}]);
+ const query=f.pool.query('A',question);await began;let selected=false;const selection=f.pool.change('A',{action:'select',id:second}).then(value=>{selected=true;return value;});await new Promise(done=>setImmediate(done));assert.equal(selected,false);resolve(hit);await query;await selection;
+ assert.equal(f.pool.definition('A').selectedId,second);assert.equal(f.pool.view('A').browserAccountId,second);assert.deepEqual(f.calls.map(row=>row.id),['one']);
 });

@@ -1,6 +1,7 @@
-"""Build a public, existing-install-only update from two reviewed manifests.
+"""Build an existing-install-only update from reviewed manifests.
 
-Never embeds Star binaries, derived frontend, credentials, or runtime profiles.
+Default scope remains public code only. A separately reviewed Star delta may
+explicitly include protected runtime/frontend assets, never user state.
 The installed Inno uninstall log is appended so the original files stay owned.
 """
 from pathlib import Path
@@ -16,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build import files_under, digest, no_links, claim_empty
 from public_scope import public_payload
 from release_privacy import require_clean
+from star_runtime_delta import entries, validate_review, allowed_path, BACKEND_MANIFEST
 
 
 def quote(value):
@@ -28,17 +30,25 @@ def build_update(args):
     for folder in (source, candidate, work, deps, output):
         no_links(folder)
     claim_empty(work)
-    old = {v['path']: v for v in json.loads(Path(args.baseline).read_bytes())['files']}
+    baseline = Path(args.baseline).absolute()
+    old = entries(baseline)
     current = {name: {'path': name, 'size': file.stat().st_size, 'sha256': digest(file)}
                for name, file in files_under(candidate).items()}
     removed = old.keys() - current.keys()
-    if removed:
+    delta_path = getattr(args, 'star_runtime_delta', None)
+    candidate_manifest = getattr(args, 'candidate_manifest', None)
+    if bool(delta_path) != bool(candidate_manifest):
+        raise ValueError('Star delta requires both --star-runtime-delta and --candidate-manifest')
+    component = validate_review(Path(delta_path).absolute(), baseline,
+                                Path(candidate_manifest).absolute(), candidate) if delta_path else None
+    approved = {row['path'] for row in component['files']} if component else set()
+    if removed and not component:
         raise ValueError('This public updater does not delete files: review migrations first')
     changed = [row for name, row in sorted(current.items())
                if name not in old or row['sha256'] != old[name]['sha256']]
-    denied = [row['path'] for row in changed if not public_payload(row['path'])]
+    denied = [row['path'] for row in changed if not public_payload(row['path']) and row['path'] not in approved]
     if denied:
-        raise ValueError('Non-public changes require a separate distribution: ' + repr(denied))
+        raise ValueError('Non-public changes require an explicit reviewed Star delta: ' + repr(denied))
     metadata = json.loads((candidate / 'fusion-install.json').read_bytes())
     version = metadata['version']
     assert re.fullmatch(r'\d+\.\d+\.\d+', version)
@@ -71,14 +81,17 @@ def build_update(args):
     shutil.copytree(deps / 'tools', work / 'build-tools')
     shutil.copy2(source / 'assets/fusion.ico', work / 'setup.ico')
     (work / 'release-docs').mkdir()
+    component_note = ('\n包含星蝉 ' + component['toVersion'] + ' 运行组件更新。' if component
+                      else '\n不包含或替换星蝉原版组件。')
     (work / 'release-docs/使用说明.txt').write_text(
-        '学不通公开增量更新 ' + version + '\n\n仅适用于已安装的兼容版本，不是首次安装包。'
-        '\n不包含或替换星蝉原版组件。账号、登录数据、队列和日志保留。'
+        '学不通增量更新 ' + version + '\n\n仅适用于已安装的兼容版本，不是首次安装包。'
+        + component_note + '账号、登录数据、队列和日志保留。'
         '\n请先退出学不通；安装前检查原版本并备份本次替换的程序文件。'
         '\n项目地址：https://github.com/A3697/XueBuTong\n', encoding='utf-8-sig')
     files = []
     guards = []
     backups = []
+    deletes = []
     for row in changed:
         relative = row['path'].replace('/', '\\')
         parent = str(Path(relative).parent)
@@ -88,6 +101,20 @@ def build_update(args):
         old_hash = old.get(row['path'], {}).get('sha256', '')
         guards.append(f"  if not CheckUpdateFile('{quote(relative)}', '{old_hash}', '{row['sha256']}') then begin Result := '程序文件与兼容版本不符，请使用完整安装包更新。'; Exit; end;")
         backups.append(f"  BackupUpdateFile('{quote(relative)}');")
+    for deleted in sorted(removed):
+        relative = deleted.replace('/', '\\')
+        guards.append(f"  if not CheckRemovedUpdateFile('{quote(relative)}', '{old[deleted]['sha256']}') then begin Result := '失效程序文件与兼容版本不符，请使用完整安装包更新。'; Exit; end;")
+        backups.append(f"  BackupUpdateFile('{quote(relative)}');")
+        deletes.append(f'Type: files; Name: "{{app}}\\{relative}"')
+    if component:
+        # Check every retained Star component file as well as the changed ones.
+        # A prepared-manifest hash alone does not prove its files are intact.
+        changed_names = {row['path'] for row in changed}
+        for filename, row in sorted(current.items()):
+            if not allowed_path(filename) or filename in changed_names:
+                continue
+            relative = filename.replace('/', '\\')
+            guards.append(f"  if not CheckUpdateFile('{quote(relative)}', '{old.get(filename, {}).get('sha256', '')}', '{row['sha256']}') then begin Result := '星蝉组件不完整或已修改，请使用完整安装包修复。'; Exit; end;")
     (work / 'installer-files.iss').write_text('\n'.join(files) + '\n', encoding='utf-8-sig')
     _, privacy = require_clean(work / 'candidate')
     (work / 'release-manifest.json').write_text(json.dumps({'files': changed}), encoding='utf-8')
@@ -96,8 +123,10 @@ def build_update(args):
     text = re.sub(r'^OutputBaseFilename=.*$', 'OutputBaseFilename=' + name, text, flags=re.M)
     text = re.sub(r'^VersionInfoOriginalFileName=.*$', 'VersionInfoOriginalFileName=' + name + '.exe', text, flags=re.M)
     text = text.replace('SetupIconFile=candidate\\assets\\fusion.ico', 'SetupIconFile=setup.ico')
-    # A partial update must not delete obsolete private files or offer a fresh target.
-    text = re.sub(r'\[InstallDelete\][\s\S]*?(?=\[Icons\])', '', text)
+    # Never inherit the full installer's legacy cleanup. Only reviewed exact
+    # Star removals may be deleted; no wildcards, directories or user data.
+    delete_section = '[InstallDelete]\n' + '\n'.join(deletes) + '\n' if deletes else ''
+    text = re.sub(r'\[InstallDelete\][\s\S]*?(?=\[Icons\])', lambda _: delete_section, text)
     text = text.replace('DisableDirPage=no', 'DisableDirPage=yes')
     support = r"""
 var UpdateBackup: String;
@@ -169,6 +198,16 @@ begin
   Result := (Hash = PreviousHash) or (Hash = NewHash);
 end;
 
+function CheckRemovedUpdateFile(Relative, PreviousHash: String): Boolean;
+var Filename: String;
+begin
+  Filename := AddBackslash(WizardDirValue) + Relative;
+  Result := False;
+  if not UpdatePathSafe(Filename) or DirExists(Filename) then Exit;
+  if not FileExists(Filename) then begin Result := True; Exit; end;
+  Result := Lowercase(GetSHA256OfFile(Filename)) = PreviousHash;
+end;
+
 procedure BackupUpdateFile(Relative: String);
 var SourceFile, Destination: String;
 begin
@@ -189,12 +228,13 @@ end;
     assert marker in text
     # Metadata and the protected-runtime manifest fix the base compatibility.
     baseline_hash = old['fusion-install.json']['sha256']
-    backend_hash = old['star-runtime/_backend-prepared-manifest.json']['sha256']
+    backend_hash = old[BACKEND_MANIFEST]['sha256']
+    new_backend_hash = current[BACKEND_MANIFEST]['sha256'] if component else backend_hash
     gate = f"""  Result := '';
   if not IsOwnedProgramDirectory(WizardDirValue) then begin Result := '此更新需要已经安装的学不通。'; Exit; end;
   if not UpdateProcessesStopped then begin Result := '请先退出此目录中的学不通及账号任务，再重试更新。'; Exit; end;
   if not CheckUpdateFile('fusion-install.json', '{baseline_hash}', '{current['fusion-install.json']['sha256']}') or
-     not CheckUpdateFile('star-runtime\\_backend-prepared-manifest.json', '{backend_hash}', '{backend_hash}') then begin Result := '当前安装不属于此增量包支持的版本。'; Exit; end;
+     not CheckUpdateFile('star-runtime\\_backend-prepared-manifest.json', '{backend_hash}', '{new_backend_hash}') then begin Result := '当前安装不属于此增量包支持的版本。'; Exit; end;
 {chr(10).join(guards)}
   Log('Compatible update verified; preparing changed-file backup.');
   UpdateBackup := AddBackslash(WizardDirValue) + 'updates\\backup-{version}-' + GetDateTimeString('yyyymmdd-hhnnss-zzz', #0, #0);
@@ -211,12 +251,24 @@ end;
     package = output / (name + '.exe')
     if package.exists():
         raise ValueError('Refusing to overwrite a published update')
+    if getattr(args, 'prepare_only', False):
+        plan = {'version': version, 'prepared': True, 'compiled': False,
+                'closedComponentsIncluded': bool(component), 'files': changed,
+                'removedFiles': [old[value] for value in sorted(removed)]}
+        if component:
+            plan['starRuntimeDelta'] = component
+        (work / 'update-plan.json').write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding='utf-8')
+        return plan
     with (work / 'compile.log').open('w', encoding='utf-8') as log:
         subprocess.run([str(work / 'build-tools/InnoSetup/ISCC.exe'), '/Q', '/O' + str(output),
                         str(work / 'installer.iss')], cwd=work, stdout=log, stderr=subprocess.STDOUT, check=True)
-    report = {'version': version, 'passed': True, 'closedComponentsIncluded': False,
+    report = {'version': version, 'passed': True, 'closedComponentsIncluded': bool(component),
               'requiresExistingInstall': True, 'package': package.name, 'sha256': digest(package),
-              'size': package.stat().st_size, 'files': changed}
+              'size': package.stat().st_size, 'files': changed,
+              'removedFiles': [old[name] for name in sorted(removed)]}
+    if component:
+        report['starRuntimeDelta'] = {key: component[key] for key in ('fromVersion', 'toVersion', 'baselineManifestSha256', 'candidateManifestSha256')}
+        report['starRuntimeDelta']['reviewSha256'] = digest(Path(delta_path))
     (output / (name + '.manifest.json')).write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
     print(json.dumps({k: v for k, v in report.items() if k != 'files'}, ensure_ascii=True))
 
@@ -225,4 +277,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     for option in ('source', 'candidate', 'baseline', 'work', 'dependencies', 'output'):
         parser.add_argument('--' + option, required=True)
+    parser.add_argument('--star-runtime-delta', help='Explicit reviewed Star runtime/frontend delta; default never includes closed components')
+    parser.add_argument('--candidate-manifest', help='Complete reviewed candidate manifest bound by --star-runtime-delta')
+    parser.add_argument('--prepare-only', action='store_true', help='Write validated compiler inputs and update-plan.json without compiling or installing')
     build_update(parser.parse_args())

@@ -5,7 +5,7 @@
  const errorText=error=>String(error?.message||'操作未完成，请重试。').replace(/^Error invoking remote method '[^']*': Error: /,'');
  function mount({container,uid,options,bridge,model}){
   let alive=true,snapshot=null,methods=[],checks=new Map(),write=Promise.resolve(),dirty=0,saved=0,writing=false,checking=false,drag=null,providerOpen=false,providerAbort=new AbortController(),checksVersion=0;
-  const active=()=>alive&&(!options?.isCurrent||options.isCurrent()),fields={},answerFields={},labels={},starOnly=[],environmentFields={},environmentTouched=new Set();let environmentRevision=0,mouseRevision=0,mouseTouched=false,enrollmentRevision=0,enrollmentTouched=false,starRevision=0,starTouched=false,ocsRevision=0,ocsTouched=false,scriptRevision=0,scriptTouched=false;
+  const active=()=>alive&&(!options?.isCurrent||options.isCurrent()),fields={},answerFields={},labels={},starOnly=[],environmentFields={},environmentTouched=new Set(),methodChecks=new Map();let environmentRevision=0,mouseRevision=0,mouseTouched=false,enrollmentRevision=0,enrollmentTouched=false,starRevision=0,starTouched=false,ocsRevision=0,ocsTouched=false,scriptRevision=0,scriptTouched=false;
   const node=el('section','xc-poc-root xc-poc-account');node.id='bp-xingchan';node.dataset.xcUid=uid;node.dataset.label='题库与答题设置';
   node.append(el('h3','','题库与答题设置'),el('p','xc-poc-note','设置按账号保存，供开启增强的浏览器与星蝉使用。关闭增强后配置仍保留，请在对应原生页面调整设置。星蝉的题库和 API 配置重启增强模式后应用。'));
   const mouseHost=container.querySelector('#bp-browser-behavior'),mouseLabel=el('label','fusion-browser-playback-setting'),mouseSwitch=el('input','fusion-answer-switch');
@@ -20,12 +20,14 @@
   enrollmentBox.append(enrollmentHint,enrollmentSelect);enrollmentHost?.append(enrollmentBox);enrollmentSelect.onchange=()=>{enrollmentTouched=true;enrollmentRevision++;autosave();};
   const starMode=el('section','xc-poc-root xc-star-mode'),starLabel=el('label','fusion-browser-playback-setting'),starSwitch=el('input','fusion-answer-switch');
   starMode.id='bp-star-mode';starMode.dataset.label='学不通增强配置';starMode.dataset.xcUid=uid;starSwitch.type='checkbox';starSwitch.setAttribute('role','switch');starSwitch.setAttribute('aria-label','星蝉增强');starSwitch.disabled=true;
-  starLabel.title='默认开启。关闭后，下次启动使用星蝉 1.3 原生前后端，题库、执行设置和队列在原生面板独立管理；学不通的星蝉业务增强不生效。原生版本重启后不恢复队列；再次开启增强会恢复融合版配置与队列。浏览器模式不受影响。';starLabel.append(starSwitch,document.createTextNode('星蝉增强'));starMode.append(starLabel);starOnly.push(starLabel);starSwitch.onchange=()=>{starTouched=true;starRevision++;autosave();};
+  starLabel.title='默认开启。关闭后，下次启动使用星蝉 1.3.1 原生前后端，题库、执行设置和队列在原生面板独立管理；学不通的星蝉业务增强不生效。原生版本重启后不恢复队列；再次开启增强会恢复融合版配置与队列。浏览器模式不受影响。';starLabel.append(starSwitch,document.createTextNode('星蝉增强'));starMode.append(starLabel);starOnly.push(starLabel);starSwitch.onchange=()=>{starTouched=true;starRevision++;autosave();};
   const ocsLabel=el('label','fusion-browser-playback-setting'),ocsSwitch=el('input','fusion-answer-switch');ocsSwitch.type='checkbox';ocsSwitch.setAttribute('role','switch');ocsSwitch.setAttribute('aria-label','OCS 增强');ocsSwitch.disabled=true;ocsLabel.title='按账号设置，下次启动浏览器时完全生效。开启后由学不通接管该账号的题库、AI、答题配置及增强功能；关闭后使用官方 OCS 脚本和原有独立配置，不影响其他账号或星蝉。';ocsLabel.append(ocsSwitch,document.createTextNode('OCS 增强'));starMode.prepend(ocsLabel);ocsSwitch.onchange=()=>{ocsTouched=true;ocsRevision++;autosave();};
   const modeOptions=el('div','fusion-enhancement-options');modeOptions.append(ocsLabel,starLabel);starMode.replaceChildren(el('h3','fusion-account-option-title','学不通增强配置'),modeOptions);
   const scriptMode=el('section','xc-poc-root fusion-script-selection'),scriptOptions=el('div','fusion-script-options'),scriptSwitch=el('input','fusion-answer-switch'),ocsChoice=el('label','','启用 OCS'),soutiChoice=el('label','','启用搜题酱');
   scriptMode.id='bp-script-selection';scriptMode.dataset.label='脚本选择';scriptMode.dataset.xcUid=uid;scriptSwitch.id='fusion-script-choice-'+uid;scriptSwitch.type='checkbox';scriptSwitch.setAttribute('role','switch');scriptSwitch.setAttribute('aria-label','启用搜题酱');scriptSwitch.disabled=true;ocsChoice.htmlFor=scriptSwitch.id;soutiChoice.htmlFor=scriptSwitch.id;
   scriptOptions.append(ocsChoice,scriptSwitch,soutiChoice);scriptMode.append(el('h3','fusion-account-option-title','脚本选择'),scriptOptions);
+  const soutiLoginHost=el('div','fusion-souti-selector');scriptMode.append(soutiLoginHost);
+  const soutiLoginSelector=window.FusionSoutijiangUI.mountSelector(soutiLoginHost,{uid,bridge,isActive:active});
   scriptSwitch.onchange=()=>{scriptOptions.dataset.selected=scriptSwitch.checked?'soutijiang':'ocs';scriptTouched=true;scriptRevision++;autosave();};
   for(const [label,checked]of [[ocsChoice,false],[soutiChoice,true]])label.onclick=event=>{event.preventDefault();if(!scriptSwitch.disabled&&scriptSwitch.checked!==checked){scriptSwitch.checked=checked;scriptSwitch.onchange();}};
   const status=el('p','xc-poc-state','正在读取配置…');status.setAttribute('role','status');node.append(status);
@@ -57,7 +59,7 @@
   const runtime=el('p','xc-poc-note'),list=el('ul','xc-connection-results');list.setAttribute('aria-label','已启用的 AI 与题库连接状态');connection.append(heading,runtime,list);starOnly.push(runtime);
   const environment=window.FusionClientEnvironment;
   if(!environment)throw Error('客户端环境配置模块尚未就绪，请重新打开账号设置。');
-  const environmentHelp='仅用于学习通的星蝉模式，按账号保存，重启此账号后生效并重新登录。修改可能需要完成验证码，或暂时无法登录；不改变公网 IP、TLS、真实硬件或浏览器硬件指纹。';
+  const environmentHelp='仅用于学习通的星蝉增强模式，按账号保存，重启此账号后生效并重新登录。修改可能需要完成验证码，或暂时无法登录；不改变公网 IP、TLS、真实硬件或浏览器硬件指纹。';
   const environmentGroup=el('div','fusion-fold-group xc-environment-group');starOnly.push(environmentGroup);
   function environmentSection(id,title){const section=el('details','fusion-account-fold xc-environment-section');section.id=id;section.dataset.label=title;section.dataset.xcUid=uid;const summary=el('summary'),hint=el('span','fusion-fold-help','ⓘ'),body=el('div','fusion-fold-body xc-environment-body');hint.title=environmentHelp;hint.tabIndex=0;hint.setAttribute('aria-label',environmentHelp);summary.append(el('span','',title),hint);section.append(summary,body);environmentGroup.append(section);starOnly.push(section);return body;}
   const deviceBody=environmentSection('bp-client-device','设备号'),fingerprintBody=environmentSection('bp-client-fingerprint','客户端与指纹');
@@ -67,12 +69,39 @@
   for(const [key,label,title]of [['androidVersion','Android 版本','请求中声明的 Android 系统版本，例如 17。'],['model','设备机型','请求中声明的机型名称。'],['buildNumber','系统构建号','请求中声明的 Android 构建号。'],['chromeVersion','Chrome 版本','请求中声明的 WebView Chrome 版本，使用四段数字。']])environmentField(fingerprintBody,key,label,title+environmentHelp);
   const headerDetails=el('details','xc-environment-advanced'),headerSummary=el('summary','','高级请求头'),headerBody=el('div','xc-environment-body');headerDetails.append(headerSummary,headerBody);fingerprintBody.append(headerDetails);
   for(const [key,label,title,max]of [['webviewBase','WebView UA 基础串','留空根据上述系统、机型及 Chrome 版本生成；设备号和 schild 后缀由程序追加。',1024],['dalvikBase','Dalvik UA 基础串','留空根据上述系统和机型生成；设备号和 schild 后缀由程序追加。',1024],['schildWebview','WebView schild','留空保留星蝉原默认值；自定义为 32 位十六进制字符。',32],['schildDalvik','Dalvik schild','留空保留星蝉原默认值；自定义为 32 位十六进制字符。',32]]){const n=environmentField(headerBody,key,label,title+environmentHelp,max);n.placeholder=key.endsWith('Base')?'留空自动构建':'留空保留原默认值';}
+  for(const [key,label]of [['webviewFull','完整 WebView User-Agent'],['dalvikFull','完整 Dalvik User-Agent']]){const n=environmentField(headerBody,key,label,'完整值优先于本类型的 UA 基础串、系统机型、schild 和自动后缀；原样作为请求头，不会自动解析或同步上方设备号。留空恢复自动构建；请确保身份与版本参数一致。随机生成或恢复原版会清空完整覆盖。'+environmentHelp,2048);n.placeholder='留空沿用自动构建的 User-Agent';}
   const fingerprintActions=el('div','xc-environment-actions');fingerprintActions.append(button('随机生成客户端配置',()=>setEnvironment(environment.randomFingerprint())),button('恢复原版客户端配置',()=>{const defaults=environment.defaults();delete defaults.deviceId;return setEnvironment(defaults);}));fingerprintBody.append(fingerprintActions);
+  let environmentImportBusy=false,environmentImportDialog=null;
+  const environmentImportButton=button('导入设备 JSON',importDeviceProfile);environmentImportButton.title='导入设备读取器的实际学习通记录，预览后仅保存到当前账号的星蝉增强环境；OCS 独立浏览器配置不变。';fingerprintActions.prepend(environmentImportButton);
   const environmentState=el('p','xc-environment-state');environmentState.setAttribute('role','status');fingerprintBody.append(environmentState);
   const details=container.querySelector('.fusion-account-details');for(const section of [scriptMode,starMode,node,connection,environmentGroup])if(details)container.insertBefore(section,details);else container.append(section);
   function environmentValue(){return environment.normalize(Object.fromEntries(Object.entries(environmentFields).map(([key,n])=>[key,n.value])));}
   function showEnvironment(){const value=environment.normalize(snapshot.clientEnvironment);for(const [key,n]of Object.entries(environmentFields)){if(!environmentTouched.has(key)&&document.activeElement!==n)n.value=value[key];n.disabled=!snapshot;}deviceInput.placeholder=snapshot.clientEnvironmentDeviceId||'留空使用本账号自动分配的设备号';}
   async function setEnvironment(patch){if(!snapshot)return;for(const [key,value]of Object.entries(patch)){if(environmentFields[key]){environmentFields[key].value=value;environmentTouched.add(key);environmentRevision++;}}await saveForm();}
+  async function importDeviceProfile(){
+   if(environmentImportBusy||!snapshot||!active())return;environmentImportBusy=true;environmentImportButton.disabled=true;
+   try{
+    await flush();if(!active())return;const revision=environmentRevision,originalEnvironment=JSON.stringify(snapshot.clientEnvironment);
+    const preview=await bridge.importDeviceProfile({uid});if(!active()||preview.canceled)return;
+    const content=el('div','xc-device-import-preview');
+    content.append(el('p','','以下参数将保存到当前账号的星蝉配置，重启该账号的星蝉增强模式后生效；OCS 的独立浏览器配置不变。'));
+    for(const key of preview.fields){const input=environmentFields[key];if(!input)continue;const row=el('label','xc-poc-field'),value=el('textarea','xc-poc-input');row.append(el('span','',input.getAttribute('aria-label')));value.value=preview.patch[key];value.readOnly=true;value.rows=key==='webviewFull'?4:1;value.setAttribute('aria-label','导入预览：'+input.getAttribute('aria-label'));row.append(value);content.append(row);}
+    for(const warning of preview.warnings)content.append(el('p','xc-poc-note',warning));
+    content.append(el('p','xc-poc-note','修改后可能需要重新登录或完成验证。未列出的现有参数保留，不导入文件中的账号、会话或其他隐私数据。'));
+    environmentImportDialog=window.FusionDialogs.open({title:'导入星蝉设备配置',content,buttons:['取消','导入并保存'],defaultId:0,cancelId:0,onAction:async index=>{
+     if(index!==1)return;if(!active())throw Error('账号窗口已关闭，未导入配置。');
+     if(environmentRevision!==revision)throw Error('客户端参数已被修改，请取消并重新导入。');
+     const latest=model.normalizeSettings(uid,await bridge.getSettings({uid}));
+     if(!active()||environmentRevision!==revision)throw Error('账号窗口或客户端参数已改变，请取消并重新导入。');
+     if(!latest.starEligible||latest.starEnhancementsEnabled===false)throw Error('账号登录方式或星蝉增强开关已改变，请取消并重新打开账号设置。');
+     if(JSON.stringify(latest.clientEnvironment)!==originalEnvironment)throw Error('客户端环境已在其他窗口更新，请取消并重新打开账号设置。');
+     const clientEnvironment=environment.normalize({...latest.clientEnvironment,...preview.patch});
+     const data=await bridge.saveSettings(model.buildSaveRequest(uid,latest,{aiBaseUrl:latest.ai.baseUrl,aiModel:latest.ai.model,aiType:latest.ai.type,clientEnvironment}));
+     if(active()){environmentRevision++;await refreshSettings(data);environmentState.textContent='已导入星蝉设备配置，重启此账号的星蝉增强模式后生效。';}
+    }});
+    await environmentImportDialog.result;
+   }finally{environmentImportDialog=null;environmentImportBusy=false;if(active())environmentImportButton.disabled=false;}
+  }
   let checkFlight=null;
   function answerValue(){return window.FusionAnswerSettings.normalize(Object.fromEntries(Object.entries(answerFields).map(([key,n])=>[key,n.type==='checkbox'?n.checked:n.type==='number'?Number(n.value):n.value])));}
   const sameApi=s=>JSON.stringify([s.ai,s.aiConfigurations,s.questionBankConfig,s.searchMethods,s.answerSettings,s.xingchanBank,s.soutijiangEnabled]);
@@ -122,23 +151,25 @@
   }
 
   function renderMethods(){
-   methodList.replaceChildren();const shown=methods.filter(method=>method.id==='soutijiang'?snapshot.soutijiangEnabled:!A.isId(method.id)||configured(method.id));
+   methods=[...methods.filter(method=>method.enabled),...methods.filter(method=>!method.enabled)];
+   methodList.replaceChildren();methodChecks.clear();const shown=methods.filter(method=>method.id==='soutijiang'?snapshot.soutijiangEnabled:!A.isId(method.id)||configured(method.id));
    shown.forEach((method,index)=>{
     const ready=configured(method.id),row=el('li','xc-poc-method');row.dataset.xcMethod=method.id;row.dataset.enabled=String(ready&&method.enabled);row.dataset.configured=String(ready);row.draggable=true;
     const handle=el('span','xc-poc-drag','⋮⋮'),identity=el('div','xc-poc-method-identity'),name=el('strong','xc-poc-method-name',(index+1)+'. '+methodName(method.id));handle.title='拖动调整搜题顺序';identity.append(name);
     if(A.isId(method.id)){const ai=snapshot.aiConfigurations.find(ai=>ai.id===method.id);if(ai.name!==ai.model)identity.append(el('span','xc-poc-model-name',ai.model));identity.append(el('small','xc-poc-method-detail',ai.type+' · '+(ai.keyPreview||'无需 API Key')));}
     else if(!ready)identity.append(el('small','xc-poc-method-detail',method.id==='soutijiang'?'请在题库配置中扫码登录搜题酱':'请点击上方“题库配置”完成设置'));
     const copy=labels[method.id]?button('复制题库配置',async()=>{await bridge.copyQuestionBank({uid,id:method.id});status.textContent='已复制 '+methodName(method.id)+' 的完整配置。';}):null;
-    const label=el('label','xc-poc-toggle'),toggle=el('input');toggle.type='checkbox';toggle.setAttribute('role','switch');toggle.setAttribute('aria-label','启用'+methodName(method.id));toggle.checked=ready&&method.enabled;toggle.disabled=!ready;toggle.title=ready?'启用或关闭此搜题方式':'请先完成此方式的配置';toggle.onchange=()=>{method.enabled=toggle.checked;row.dataset.enabled=String(method.enabled);renderChecks();autosave();};label.append(toggle,el('span','',ready?'启用':'未配置'));
+    const label=el('label','xc-poc-toggle'),toggle=el('input');toggle.type='checkbox';toggle.setAttribute('role','switch');toggle.setAttribute('aria-label','启用'+methodName(method.id));toggle.checked=ready&&method.enabled;toggle.disabled=!ready;toggle.title=ready?'启用或关闭此搜题方式；未启用的方式自动置底':'请先完成此方式的配置';toggle.onchange=()=>{method.enabled=toggle.checked;renderMethods();autosave();};label.append(toggle,el('span','',ready?'启用':'未配置'));
     const movement=el('span','xc-poc-movement'),move=to=>{methods=model.reorderSearchMethods(methods,method.id,shown[to].id);renderMethods();autosave();};
-    const up=button('↑',()=>move(index-1)),down=button('↓',()=>move(index+1));up.disabled=index===0;down.disabled=index===shown.length-1;up.setAttribute('aria-label','上移'+methodName(method.id));down.setAttribute('aria-label','下移'+methodName(method.id));
+    const up=button('↑',()=>move(index-1)),down=button('↓',()=>move(index+1));up.disabled=index===0||shown[index-1].enabled!==method.enabled;down.disabled=index===shown.length-1||shown[index+1].enabled!==method.enabled;up.setAttribute('aria-label','上移'+methodName(method.id));down.setAttribute('aria-label','下移'+methodName(method.id));
+    const verify=button('验证',()=>checkConnections([method.id])),verification=el('span','xc-poc-method-verification');verify.setAttribute('aria-label','验证'+methodName(method.id));verify.title=ready?(method.id==='soutijiang'?'单独检查官方登录状态，不消耗搜题额度。':'只验证此方式，不会启用它；会发送一条测试请求，可能消耗接口额度。'):'请先完成此方式的配置';verification.setAttribute('role','status');identity.append(verification);methodChecks.set(method.id,{verify,verification,ready});movement.append(verify);
     const remove=button('移除',()=>removeMethod(method.id));remove.classList.add('xc-danger-button');remove.disabled=!ready&&method.id!=='soutijiang';remove.setAttribute('aria-label','移除'+methodName(method.id)+'配置');if(copy)movement.append(copy);if(ready||method.id==='soutijiang')movement.append(button('更改配置',()=>openProviders(method.id==='soutijiang'?'soutijiang':A.isId(method.id)?'ai':method.id==='xingchan-bank'?'universal':'banks',method.id)));movement.append(up,down,remove);row.append(handle,identity,label,movement);
-    row.ondragstart=e=>{if(e.target.closest('button,input'))return e.preventDefault();drag=method.id;e.dataTransfer?.setData('text/plain',uid+':'+method.id);};row.ondragover=e=>{if(drag)e.preventDefault();};row.ondrop=e=>{e.preventDefault();if(!drag)return;methods=model.reorderSearchMethods(methods,drag,method.id);drag=null;renderMethods();autosave();};row.ondragend=()=>drag=null;methodList.append(row);
+    row.ondragstart=e=>{if(e.target.closest('button,input'))return e.preventDefault();drag=method.id;e.dataTransfer?.setData('text/plain',uid+':'+method.id);};row.ondragover=e=>{if(drag)e.preventDefault();};row.ondrop=e=>{e.preventDefault();if(!drag)return;const source=methods.find(item=>item.id===drag);if(source?.enabled!==method.enabled){drag=null;return;}methods=model.reorderSearchMethods(methods,drag,method.id);drag=null;renderMethods();autosave();};row.ondragend=()=>drag=null;methodList.append(row);
    });updateEligibility();renderChecks();
   }
   function renderScriptSelection(){const available=snapshot.browserScriptAvailability;if(!scriptTouched)scriptSwitch.checked=available.selected==='soutijiang';scriptSwitch.disabled=!available.canChoose;scriptOptions.dataset.selected=scriptSwitch.checked?'soutijiang':'ocs';scriptOptions.classList.toggle('is-disabled',scriptSwitch.disabled);scriptOptions.title=available.canChoose?'按账号选择，下次启动浏览器时生效。只切换 OCS 与官方搜题酱，保留其他用户脚本；搜题酱题库配置独立生效。':available.ocs?'仅安装了 OCS，安装大学搜题酱后可切换。':available.soutijiang?'仅安装了大学搜题酱，安装 OCS 脚本和脚本管理器后可切换。':'请先在应用中心安装脚本管理器及 OCS 脚本，或安装大学搜题酱。';}
   function updateEligibility(){const isStar=window.FusionWorkspace?.loginProfile?.(uid)?.starEligible===true;for(const n of starOnly)n.hidden=!isStar;environmentGroup.hidden=!isStar||snapshot?.starEnhancementsEnabled===false;}
-  function renderChecks(){list.replaceChildren();for(const method of methods.filter(m=>m.enabled)){const item=checks.get(method.id)||{state:'unchecked',message:'尚未验证'},row=el('li','xc-connection-result');row.dataset.checkId=method.id;row.dataset.state=item.state;if(item.checkedAt)row.title='上次检查：'+new Date(item.checkedAt).toLocaleString();row.append(el('strong','',methodName(method.id)),el('span','xc-check-state xc-check-'+item.state,({unchecked:'未验证',connected:'连接正常',failed:'连接失败',limited:'额度受限',waiting:'验证中',unconfigured:'未配置'})[item.state]||item.state),el('p','',item.message));list.append(row);}checkButton.disabled=checking||!snapshot||!methods.some(m=>m.enabled);}
+  function renderChecks(){for(const [id,{verify,verification,ready}]of methodChecks){const item=checks.get(id),state=item?.state||(ready?'unchecked':'unconfigured');verify.disabled=checking||!ready;verification.textContent=({unchecked:'尚未验证',connected:'连接正常',failed:'连接失败',limited:'额度受限',waiting:'等待处理',unconfigured:'未配置'})[state]||'尚未验证';if(checking&&state==='waiting')verification.textContent='正在验证…';verification.className='xc-poc-method-verification xc-check-state xc-check-'+state;verification.title=(item?.message||'点击验证检查此搜题方式')+(item?.checkedAt?'；上次检查：'+new Date(item.checkedAt).toLocaleString():'');}list.replaceChildren();for(const method of methods.filter(m=>m.enabled)){const item=checks.get(method.id)||{state:'unchecked',message:'尚未验证'},row=el('li','xc-connection-result');row.dataset.checkId=method.id;row.dataset.state=item.state;if(item.checkedAt)row.title='上次检查：'+new Date(item.checkedAt).toLocaleString();row.append(el('strong','',methodName(method.id)),el('span','xc-check-state xc-check-'+item.state,({unchecked:'未验证',connected:'连接正常',failed:'连接失败',limited:'额度受限',waiting:'验证中',unconfigured:'未配置'})[item.state]||item.state),el('p','',item.message));list.append(row);}checkButton.disabled=checking||!snapshot||!methods.some(m=>m.enabled);}
    async function checkConnections(only){if(checkFlight)await checkFlight.catch(()=>{});await flush();checking=true;const ids=only||methods.filter(m=>m.enabled).map(m=>m.id);for(const id of ids)checks.set(id,{state:'waiting',message:'正在验证连接…'});renderChecks();const checkedRevision=checksVersion,job=(async()=>{try{const data=await bridge.checkConnections({uid,only:ids});if(!active()||checkedRevision!==checksVersion)return;for(const item of data.items||[])checks.set(item.id,item);}finally{checking=false;if(active())renderChecks();}})();checkFlight=job;try{return await job;}finally{if(checkFlight===job)checkFlight=null;}}
   async function openProviders(initialTab='banks',editId){
    await flush();if(providerOpen||!snapshot||!active())return;providerOpen=true;const old=snapshot;
@@ -149,7 +180,7 @@
     await refreshSettings(data);status.textContent='题库配置已保存，搜题顺序和连接检查已刷新；星蝉重启增强模式后应用。';
     const changed=snapshot.questionBanks.filter(bank=>!old.questionBanks.some(before=>before.id===bank.id)||old.questionBankConfig!==snapshot.questionBankConfig).map(bank=>bank.id);
     if(changed.length)void checkConnections(changed).catch(promptError);
-   }});}finally{providerOpen=false;if(active()){const current=await bridge.getSettings({uid});if(current.soutijiangConfigured!==snapshot.soutijiangConfigured)await refreshSettings(current);}}
+   }});}finally{providerOpen=false;if(active()){const current=await bridge.getSettings({uid});await refreshSettings(current);await soutiLoginSelector.refresh();}}
   }
   function placeConnection(){
    updateEligibility();const details=container.querySelector('.fusion-account-details');if(details){let previous=node;for(const section of [connection,environmentGroup,details]){if(previous.nextElementSibling!==section)previous.after(section);previous=section;}}
@@ -158,7 +189,7 @@
   let runtimeBusy=false;async function refreshRuntime(){if(!active()||document.hidden||window.__fusionWindowVisible===false||runtimeBusy)return;runtimeBusy=true;try{const raw=await bridge.listStatus({uids:[uid]}),s=raw.items?.find(x=>x.uid===uid);if(active()&&s)runtime.textContent=(s.summary||'星蝉未启动。')+(s.displayName?' 登录姓名：'+s.displayName:'');}catch{}finally{runtimeBusy=false;}}
   async function load(){try{await window.FusionWorkspace?.flushCredentials();const data=await bridge.getSettings({uid});if(!active())return;await refreshSettings(data);for(const [key,n]of Object.entries(answerFields)){const v=window.FusionAnswerSettings.normalize(snapshot.answerSettings)[key];if(n.type==='checkbox')n.checked=v;else n.value=String(v);}status.textContent='配置已载入；修改后自动保存。';}catch(error){promptError(error);}}
   void load();void refreshRuntime();const timer=setInterval(refreshRuntime,2500);
-  return {uid,node,connection,placeConnection,dispose(){alive=false;flushers.delete(flush);clearInterval(timer);providerAbort.abort();scriptMode.remove();starMode.remove();node.remove();connection.remove();environmentGroup.remove();mouseLabel.remove();enrollmentBox.remove();}};
+  return {uid,node,connection,placeConnection,dispose(){alive=false;flushers.delete(flush);clearInterval(timer);providerAbort.abort();environmentImportDialog?.close();soutiLoginSelector.dispose();scriptMode.remove();starMode.remove();node.remove();connection.remove();environmentGroup.remove();mouseLabel.remove();enrollmentBox.remove();}};
  }
  window.FusionAccountForm={mount,async flush(){await Promise.all([...flushers].map(flush=>flush()));await Promise.all([...jobs]);}};
 })();

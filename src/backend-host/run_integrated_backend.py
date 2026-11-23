@@ -27,7 +27,8 @@ RUNTIME = ROOT / 'star-runtime'
 INSTANCES = ROOT / 'instances'
 HOST = '127.0.0.1'
 MANIFEST_NAME = '_backend-prepared-manifest.json'
-EXPECTED_EXE_SHA256 = 'd5299de1291dfee4805a1b0b4de0ef5612b21d09819e6ad544ca9602bb840a82'
+EXPECTED_EXE_SHA256 = '0373bcc62639895a2b4433d67fa409c59594ba538d79c60f2ea6dade8aeaedf4'
+EXPECTED_STAR_VERSION = '1.3.1'
 EXPECTED_PYTHON_SHA256 = 'a07f7d09c3121492bb066535c6d0811df5fbc2090cbca7031a97bb47ce1480c9'
 DPAPI_HEADER = b'XSLIVE1\0'
 DPAPI_ENTROPY = b'XingchanLiveBackendTokenV1'
@@ -36,7 +37,7 @@ ENHANCEMENT_MODULES = (
     'account_environment', 'upstream_updates', 'antispider_recovery',
     'video_speed_policy', 'answer_policy', 'supplemental_tasks', 'homework_catalog',
     'course_metadata', 'integration_state', 'queue_prune',
-    'original_search_bridge', 'integration_controls',
+    'original_search_bridge', 'integration_controls', 'course_watch',
 )
 
 
@@ -94,11 +95,11 @@ def verify_runtime():
 
 
 def verify_native_web():
-    """Serve only the unchanged web members from the paired original 1.3 EXE."""
+    """Serve only unchanged web members from the paired upstream EXE."""
     web = confined(ROOT / 'assets' / 'star-native', ROOT)
     manifest = json.loads((web / '_source-manifest.json').read_text(encoding='utf-8'))
     if (manifest.get('source_exe_sha256') != EXPECTED_EXE_SHA256
-            or manifest.get('version') != '1.3.0' or not manifest.get('files')):
+            or manifest.get('version') != EXPECTED_STAR_VERSION or not manifest.get('files')):
         raise ValueError('native frontend identity mismatch')
     seen = set()
     for entry in manifest['files']:
@@ -319,6 +320,7 @@ def launch(args):
     state.write('preparing')
     redirect_private_log(session_dir / 'backend-private.log')
     listener, engine, account_lock = None, None, None
+    course_watcher, session_guard = None, None
     dll_handles = []
     done, stop = threading.Event(), threading.Event()
     server_reference = {}
@@ -440,6 +442,26 @@ def launch(args):
                 saved_preferences = json.loads(html_preferences.read_text(encoding='utf-8-sig'))
                 blacklisted_courses = saved_preferences.get('accounts', {}).get(uid, {}).get('courseFilter', {}).get('blacklist', [])
             install_queue_prune(engine, account_store, integration_state, blacklisted_courses)
+            def current_blacklist():
+                # The panel can update its filter while this backend stays alive.
+                # Retain the last known blacklist if an atomic replacement is in flight.
+                nonlocal blacklisted_courses
+                try:
+                    if html_preferences.is_file():
+                        saved = json.loads(html_preferences.read_text(encoding='utf-8-sig'))
+                        values = saved.get('accounts', {}).get(uid, {}).get('courseFilter', {}).get('blacklist', [])
+                        if isinstance(values, list):
+                            blacklisted_courses = [value for value in values if isinstance(value, str)]
+                except (OSError, ValueError, TypeError, AttributeError):
+                    pass
+                return list(blacklisted_courses)
+
+            from course_watch import install as install_course_watch
+            course_watcher = install_course_watch(engine, account_store, blacklist=current_blacklist)
+        # Session displacement is a host lifecycle stop, shared by both modes.
+        # Install after request observers so it can block subsequent requests.
+        from session_guard import install as install_session_guard
+        session_guard = install_session_guard(emit=engine.emit, engine=engine)
         install_log_stream(hub)
         application = create_app(web_dir=web_dir, hub=hub, engine=engine,
                                  token=token, on_shutdown_request=request_shutdown)
@@ -450,6 +472,7 @@ def launch(args):
             install_routes(application, token=token, host=HOST, port=port)
             from integration_controls import install_routes as install_controls
             install_controls(application, token=token, host=HOST, port=port, store=account_store, state=integration_state)
+            course_watcher.install_routes(application, token=token, host=HOST, port=port)
             from websocket_lifecycle import WebSocketLifecycle
             application = WebSocketLifecycle(application)
         else:
@@ -462,7 +485,7 @@ def launch(args):
         if native and loaded_enhancements:
             raise RuntimeError('native mode unexpectedly loaded fusion enhancements')
         state.write('loading_backend', enhancement_modules=loaded_enhancements,
-                    frontend='original-1.3.0' if native else 'fusion',
+                    frontend='original-' + EXPECTED_STAR_VERSION if native else 'fusion',
                     native_token_transport=native,
                     websocket_transport='websockets')
         payload = {'schema': 1, 'host': HOST, 'port': port, 'token': token,
@@ -492,6 +515,8 @@ def launch(args):
                     return
 
         threading.Thread(target=observe_started, name='integration-startup-state', daemon=True).start()
+        if course_watcher is not None:
+            course_watcher.start()
         server.run(sockets=[listener])
         if not getattr(server, 'started', False) and not stop.is_set():
             raise RuntimeError('backend did not reach listening state')
@@ -503,10 +528,22 @@ def launch(args):
     finally:
         done.set()
         cleanup_ok = True
+        if course_watcher is not None:
+            try:
+                cleanup_ok = bool(course_watcher.close()) and cleanup_ok
+            except BaseException:
+                cleanup_ok = False
+                traceback.print_exc(file=sys.stderr)
         if engine is not None:
             try:
                 # Same original shutdown method used by ManagerWindow.stop_service.
-                cleanup_ok = bool(engine.stop_and_wait(timeout=10.0))
+                cleanup_ok = bool(engine.stop_and_wait(timeout=10.0)) and cleanup_ok
+            except BaseException:
+                cleanup_ok = False
+                traceback.print_exc(file=sys.stderr)
+        if session_guard is not None:
+            try:
+                session_guard.dispose()
             except BaseException:
                 cleanup_ok = False
                 traceback.print_exc(file=sys.stderr)
@@ -527,7 +564,7 @@ def main():
     parser.add_argument('--uid', required=True)
     parser.add_argument('--session', required=True)
     parser.add_argument('--port', type=int, default=0)
-    parser.add_argument('--native', action='store_true', help='Use unchanged Xingchan 1.3 behavior and isolated native data')
+    parser.add_argument('--native', action='store_true', help='Use upstream Xingchan behavior and isolated native data')
     args = parser.parse_args()
     try:
         identifiers(args.uid, args.session)

@@ -22,7 +22,7 @@ class NativeBackendMode(unittest.TestCase):
         self.web.mkdir(parents=True)
         self.content = b'<html>original fixture</html>'
         (self.web / 'index.html').write_bytes(self.content)
-        self.manifest = {'version': '1.3.0', 'source_exe_sha256': host.EXPECTED_EXE_SHA256,
+        self.manifest = {'version': host.EXPECTED_STAR_VERSION, 'source_exe_sha256': host.EXPECTED_EXE_SHA256,
                          'files': [{'path': 'index.html', 'source_member': 'web/dist/index.html',
                                     'size': len(self.content), 'sha256': hashlib.sha256(self.content).hexdigest()}]}
         self.write_manifest()

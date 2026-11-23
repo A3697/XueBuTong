@@ -13,6 +13,6 @@ function normalizeSearchMethods(value,legacy='yanxi-first'){
  });
  if(!ids.has('xingchan-ai'))throw Error('缺少搜题方式入口');
  if(!ids.has('xingchan-bank'))copy.push({id:'xingchan-bank',enabled:false});
- return copy;
+ return copy.filter(item=>item.enabled).concat(copy.filter(item=>!item.enabled));
 }
 module.exports={normalizeSearchMethods};

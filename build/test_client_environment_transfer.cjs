@@ -9,7 +9,7 @@ const Workspace=require('../src/fusion/workspace-preferences.cjs');
 const WindowSizes=require('../src/fusion/window-sizes.cjs');
 const UID='a'.repeat(32),OTHER='b'.repeat(32),REMOTE='c'.repeat(32);
 const copy=value=>structuredClone(value);
-const explicit={deviceId:'1'.repeat(32),androidVersion:'14',model:'Pixel 7',buildNumber:'UP1A.231005.007',chromeVersion:'126.0.0.0',webviewBase:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36',dalvikBase:'Dalvik/2.1.0 (Linux; U; Android 14)',schildWebview:'2'.repeat(32),schildDalvik:'3'.repeat(32)};
+const explicit={deviceId:'1'.repeat(32),androidVersion:'14',model:'Pixel 7',buildNumber:'UP1A.231005.007',chromeVersion:'126.0.0.0',webviewBase:'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36',dalvikBase:'Dalvik/2.1.0 (Linux; U; Android 14)',schildWebview:'2'.repeat(32),schildDalvik:'3'.repeat(32),webviewFull:'FixtureWebView/2.0 (schild:22222222222222222222222222222222) (@Kalimdor)_11111111111111111111111111111111',dalvikFull:'FixtureDalvik/2.0 (device:Fixture)'};
 function account(uid,username){return {uid,parent:'root',type:'browser',name:uid,notes:'',tags:[],cachePath:'$CACHE_PATH',playwrightScripts:username?[{name:'超星-手机密码登录',configs:{phone:{value:username},password:{value:'fixture-password'}}}]:[]};}
 function document(items=[account(UID)]){return {render:{browser:{root:{uid:'root',type:'root',name:'根目录',children:Object.fromEntries(items.map(item=>[item.uid,item]))}},setting:{},scripts:[]}};}
 function profile(environment){return {revision:5,username:'',schoolId:'',ai:{baseUrl:'',model:'',type:'openai'},questionStrategy:'yanxi-first',secrets:{},...(environment===undefined?{}:{clientEnvironment:copy(environment)})};}
@@ -153,7 +153,7 @@ test('cloning an account retains UA, courses, bank settings, photos and layout w
  assert.deepEqual(f.accounts.clone({sourceUid:UID,targetUid:OTHER}),{copied:true});
  const cloned=f.controller.data.profiles[OTHER];
  assert.deepEqual(cloned.clientEnvironment,Environment.forClone(explicit));
- for(const key of ['deviceId','schildWebview','schildDalvik'])assert.equal(cloned.clientEnvironment[key],'');
+ for(const key of ['deviceId','schildWebview','schildDalvik','webviewFull','dalvikFull'])assert.equal(cloned.clientEnvironment[key],'');
  assert.deepEqual(cloned.secrets,source.secrets);
  assert.deepEqual(JSON.parse(fs.readFileSync(stateFile(f.root,OTHER))),Object.fromEntries(Object.entries(state).filter(([key])=>customKey(key))));
  assert.deepEqual(fs.readFileSync(path.join(path.dirname(stateFile(f.root,OTHER)),'face/photo.jpg')),fs.readFileSync(photo));

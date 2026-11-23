@@ -21,7 +21,8 @@ DEVICE_KEY = 'ua.device_id'
 PREFERENCES_KEY = 'integration.client_preferences'
 DEFAULTS = dict(deviceId='', androidVersion='17', model='2410DPN6CC',
                 buildNumber='CP2A.260605.016', chromeVersion='151.0.7922.199',
-                webviewBase='', dalvikBase='', schildWebview='', schildDalvik='')
+                webviewBase='', dalvikBase='', schildWebview='', schildDalvik='',
+                webviewFull='', dalvikFull='')
 MAX_COOKIES = 3000
 COOKIE_FIELDS = ('version', 'name', 'value', 'port', 'port_specified', 'domain',
                  'domain_specified', 'domain_initial_dot', 'path', 'path_specified',
@@ -38,6 +39,8 @@ def normalize_preferences(value):
         if key in value:
             if not isinstance(value[key], str):
                 raise ValueError('客户端环境字段必须为文本。')
+            if key in ('webviewFull', 'dalvikFull') and re.search(r'[\r\n]', value[key]):
+                raise ValueError('完整 User-Agent 必须为单行文本。')
             result[key] = value[key].strip()
     for key in ('deviceId', 'schildWebview', 'schildDalvik'):
         if result[key] and not re.fullmatch(r'[a-fA-F0-9]{32}', result[key]):
@@ -54,11 +57,15 @@ def normalize_preferences(value):
         if text and (len(text) > 1024 or not re.fullmatch(r'[\x20-\x7e]+', text)
                      or re.search(r'\(schild:|ChaoXingStudy_', text, re.I)):
             raise ValueError('UA 基础串格式无效；设备号及 schild 后缀由程序追加。')
+    for key in ('webviewFull', 'dalvikFull'):
+        text = result[key]
+        if text and (len(text) > 2048 or not re.fullmatch(r'[\x20-\x7e]+', text)):
+            raise ValueError('完整 User-Agent 需为单行英文字符，最多 2048 字符。')
     return result
 
 
 def configure_ua(ua, preferences):
-    """Keep the upstream suffix, including its app/protocol versions, intact."""
+    """Preserve generated headers unless this account explicitly overrides them."""
     ua.ANDROID_VERSION = preferences['androidVersion']
     ua.DEVICE_MODEL = preferences['model']
     ua.DEVICE_BUILD = preferences['buildNumber']
@@ -70,6 +77,10 @@ def configure_ua(ua, preferences):
     ua.DALVIK_BASE = preferences['dalvikBase'] or (
         f'Dalvik/2.1.0 (Linux; U; Android {ua.ANDROID_VERSION}; {device})')
     for name in ('WEBVIEW', 'DALVIK'):
+        complete = preferences['webviewFull' if name == 'WEBVIEW' else 'dalvikFull']
+        if complete:
+            setattr(ua, name + '_UA', complete)
+            continue
         original = getattr(ua, name + '_UA')
         _, marker, suffix = original.partition(' (schild:')
         if not marker or not suffix.endswith('_' + ua.DEVICE_ID):
@@ -138,7 +149,10 @@ def prepare_account_environment(store, uid, preferences=None):
             store.delete(key)
     store.set(OWNER_KEY, uid)
     previous = store.get(PREFERENCES_KEY)
-    changed = previous != preferences if isinstance(previous, dict) else preferences != DEFAULTS
+    # Adding optional fields with empty defaults must not invalidate an existing
+    # login when upgrading an otherwise unchanged account.
+    changed = (normalize_preferences(previous) != preferences
+               if isinstance(previous, dict) else preferences != DEFAULTS)
     requested_device = preferences['deviceId']
     if requested_device and requested_device != store.get(DEVICE_KEY):
         store.set(DEVICE_KEY, requested_device)

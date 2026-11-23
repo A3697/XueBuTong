@@ -67,6 +67,13 @@ const {ModeCoordinator}=require(path.join(lab,'src','mode-coordinator.cjs'));
 const {WorkspacePreferences}=require(path.join(lab,'src','workspace-preferences.cjs'));
 const {ConfigTransfer}=require(path.join(lab,'src','config-transfer.cjs'));
 const modes=new ModeCoordinator(controller),workspacePreferences=new WorkspacePreferences(lab);
+const sessionGuardMain=()=>BrowserWindow.getAllWindows().find(win=>!win.isDestroyed()&&win.webContents.getURL().startsWith(publicRootUrl));
+const sessionWarning=require(path.join(lab,'src/session-guard-window.cjs')).createWarningPresenter({root:lab,findMain:sessionGuardMain,getSnapshot:()=>sessionGuard.snapshot()});
+const sessionGuard=new (require(path.join(lab,'src/session-guard.cjs')).SessionGuard)({controller,modes,notify:sessionWarning,
+ nameOf:uid=>{const visit=(node,depth=0)=>{if(!node||typeof node!=='object'||depth>64)return null;if(node.uid===uid)return node.name;for(const child of Object.values(node.children||{})) {const name=visit(child,depth+1);if(name)return name;}return null;};return visit(require('./lib/src/store').getDecryptedRenderData().browser?.root)||controller.data.profiles[uid]?.displayName||uid;},
+ stopBrowser:async({uid,leaseId})=>{const win=sessionGuardMain();if(!win)throw Error('主窗口不可用');await win.webContents.executeJavaScript('import("./assets/index.c87a5b08.js").then(async m=>{const p=m.f.from('+JSON.stringify(uid)+');if(p?.fusionLease?.id==='+JSON.stringify(leaseId)+')await p.close();});');}
+});
+controller.onSessionGuardEvent=(runtime,event)=>sessionGuard.handleStar(runtime,event);
 const {createLoginVerifier}=require(path.join(lab,'src/login-verifier.cjs'));
 const verifier=createLoginVerifier({chromium:require('playwright-core').chromium,executablePath:path.join(lab,'ocs-lab/resources/bin/chrome/chrome/chrome.exe'),ocrApiUrl:()=>`http://127.0.0.1:${require('./lib/src/store').store.store.server.port}/ocr`,ocrEnabled:()=>applicationSettings.data.items['apps:ocr']!==false});
 const {LoginService}=require(path.join(lab,'src/login-service.cjs'));const loginService=new LoginService({controller,modes,verifier});
@@ -137,9 +144,10 @@ controller.onOpenHtml=async({uid,url,mode})=>{
   if(!win.isDestroyed()&&process.env.OCS_POC_HEADLESS!=='1')win.show();
 };
 controller.onCloseHtml=async({uid})=>closePanel(uid);
-const allowed=['getInitializationStatus','getDefaultSetupState','finishDefaultSetupPrompt','installDefaultComponents','getSettings','saveSettings','syncNativeLogin','recordBrowserName','verifyLogin','listStatus','start','stop','openHtml','getLogs','claimBrowser','releaseBrowser','prepareBrowserCacheRemoval','restoreBrowserCacheRemoval','finishBrowserCacheRemoval','getWorkspacePreferences','saveWorkspacePreferences','exportConfig','importConfig','cloneAccountSettings','removeAccountSettings','getStarMonitor','starTaskAction','confirmClose','finishClose','openAbout','getConnectionChecks','checkConnections','getApplicationStates','changeApplicationState','installSoutijiang','removeSoutijiang','clearLogs','takeStartupLaunchPlan','setPlayback','copyQuestionBank','getQuestionBankConfiguration','importQuestionBanks','removeQuestionBank','listAiModels'];
+const allowed=['reportSessionDisplacement','acknowledgeSessionGuard','getInitializationStatus','getDefaultSetupState','finishDefaultSetupPrompt','installDefaultComponents','getSettings','saveSettings','syncNativeLogin','recordBrowserName','verifyLogin','listStatus','start','stop','openHtml','getLogs','claimBrowser','releaseBrowser','prepareBrowserCacheRemoval','restoreBrowserCacheRemoval','finishBrowserCacheRemoval','getWorkspacePreferences','saveWorkspacePreferences','exportConfig','importConfig','cloneAccountSettings','removeAccountSettings','getStarMonitor','starTaskAction','confirmClose','finishClose','openAbout','getConnectionChecks','checkConnections','getApplicationStates','changeApplicationState','installSoutijiang','removeSoutijiang','clearLogs','takeStartupLaunchPlan','setPlayback','copyQuestionBank','getQuestionBankConfiguration','importQuestionBanks','removeQuestionBank','listAiModels'];
 allowed.push('getAccountOcsRuntime','getOcsPlugins','changeOcsPlugins','checkOcsUpdate','reportOcsConflict');
 allowed.push('getSoutijiangState','loginSoutijiang','logoutSoutijiang','changeSoutijiangAccounts');
+allowed.push('importDeviceProfile');
 const ocsPlugins=require(path.join(lab,'src/ocs-plugin-manager.cjs')).manager(lab);
 const pluginAction=async(method,input)=>{
  const native=require('./lib/src/store'),render=native.getDecryptedRenderData();
@@ -156,6 +164,8 @@ const pluginAction=async(method,input)=>{
 const BrowserScripts=require(path.join(lab,'src/browser-script-selection.cjs'));
 controller.browserScriptAvailability=uid=>BrowserScripts.state({selected:controller.base(uid).browserScript,scripts:require('./lib/src/store').getDecryptedRenderData().scripts||[],extensions:require('./lib/src/extension-runtime').inventory(undefined,{root:lab})});
 const handlers={
+ reportSessionDisplacement:input=>sessionGuard.reportBrowser(input),
+ acknowledgeSessionGuard:({revision})=>sessionGuard.acknowledge(revision),
  getSoutijiangState:async({uid,slotId,refresh=false,connect=false})=>{const before=soutijiang.view(uid).connectionKey,state=await soutijiang.state(uid,{slotId,refresh:refresh===true,connect:connect===true});if(before!==state.connectionKey)connectionChecks.invalidate(uid,'soutijiang');return state;},
  loginSoutijiang:async({uid,slotId,visible=false})=>{const state=await soutijiang.login(uid,{slotId,visible:visible===true});connectionChecks.invalidate(uid,'soutijiang');return state;},
  logoutSoutijiang:async({uid,slotId})=>{const state=await soutijiang.logout(uid,{slotId});connectionChecks.invalidate(uid,'soutijiang');return state;},
@@ -233,6 +243,25 @@ const handlers={
   if(result.canceled||!result.filePath)return {saved:false};
   const file=/\.ocsdata$/i.test(result.filePath)?result.filePath:result.filePath+'.ocsdata';
   fs.writeFileSync(file+'.tmp',JSON.stringify(snapshot,null,2),'utf8');fs.renameSync(file+'.tmp',file);return {saved:true};
+ },
+ importDeviceProfile:async({uid},event)=>{
+  const current=controller.getSettings({uid});
+  if(!current.starEligible)throw Error('设备 JSON 仅用于学习通账号的星蝉模式。');
+  const result=await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender),{title:'导入星蝉设备配置',properties:['openFile'],filters:[{name:'设备读取器 JSON',extensions:['json']}]});
+  if(result.canceled||!result.filePaths?.length)return {canceled:true};
+  if(!controller.getSettings({uid}).starEligible)throw Error('账号登录方式已改变，设备 JSON 仅用于学习通的星蝉配置。');
+  const importer=require(path.join(lab,'src/device-profile-import.cjs'));
+  let fd;
+  try{
+   fd=fs.openSync(result.filePaths[0],'r');const stat=fs.fstatSync(fd);
+   if(!stat.isFile())throw Error('请选择设备读取器导出的 JSON 文件。');
+   if(stat.size>importer.MAX_BYTES)throw Error('设备 JSON 不能超过 1 MiB。');
+   const buffer=Buffer.alloc(importer.MAX_BYTES+1);let size=0,read;
+   while(size<buffer.length&&(read=fs.readSync(fd,buffer,size,buffer.length-size,null))>0)size+=read;
+   if(size>importer.MAX_BYTES)throw Error('设备 JSON 不能超过 1 MiB。');
+   return importer.parse(buffer.subarray(0,size).toString('utf8'));
+  }catch(error){if(error.code&&/^E[A-Z]+$/.test(error.code))throw Error('无法读取设备 JSON，请确认文件存在且可以访问。');throw error;}
+  finally{if(fd!==undefined)fs.closeSync(fd);}
  },
  importConfig:async(input,event)=>{
   if(modes.anyActive())throw Error('请先在学不通中停止所有浏览器和星蝉任务，并结束正在进行的登录验证，再导入配置。');
@@ -312,6 +341,7 @@ app.on('web-contents-created',(_event,contents)=>{
     }
     await contents.executeJavaScript(`document.title='学不通';document.documentElement.dataset.xingchanFusion='true';`);
     mainInitialized=true;
+    sessionGuard.publish();
   });
 });
 app.on('before-quit',event=>{if(quitting)return;event.preventDefault();const main=BrowserWindow.getAllWindows().find(win=>!win.isDestroyed()&&win.webContents.getURL().startsWith(publicRootUrl));if(main){trayLifecycle.exit();return;}if(!modes.anyActive())handlers.finishClose();});

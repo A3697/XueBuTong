@@ -42,11 +42,12 @@
     });
     if(!ids.has('xingchan-ai'))throw new Error('缺少搜题方式入口');
     if(!ids.has('xingchan-bank'))result.push({id:'xingchan-bank',enabled:false});
-    return result;
+    return result.filter(item=>item.enabled).concat(result.filter(item=>!item.enabled));
   }
   function reorderSearchMethods(value,from,to) {
     const result=normalizeSearchMethods(value),a=result.findIndex(x=>x.id===from),b=result.findIndex(x=>x.id===to);
     if(a<0||b<0)throw new Error('拖动的搜题方式无效');
+    if(result[a].enabled!==result[b].enabled)return result;
     const moved=result.splice(a,1)[0];result.splice(b,0,moved);return result;
   }
 

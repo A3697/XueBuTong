@@ -750,7 +750,7 @@ async function openFusionAbout(event) {
   try{
     if(typeof window.xingchanLab?.openAbout==='function')return await window.xingchanLab.openAbout();
     if(typeof window.xingchanBridge?.openAbout==='function')return await window.xingchanBridge.openAbout();
-    Modal.info({title:'关于学不通',content:'学不通 2.5.12。本地关于窗口尚未就绪，请稍后重试。',okText:'关闭'});
+    Modal.info({title:'关于学不通',content:'学不通 2.5.13。本地关于窗口尚未就绪，请稍后重试。',okText:'关闭'});
   }catch(_){Modal.error({title:'关于学不通',content:'本地关于窗口暂时无法打开，请稍后重试。',okText:'关闭'});}
 }
 async function about() {
@@ -903,6 +903,7 @@ class Process extends events.exports {
     const listeners = {
       'ocs-plugin-conflict':info=>{void window.FusionOcsPlugins?.action('reportOcsConflict',info).then(()=>window.FusionWorkspace?.notify('OCS 增强接口不兼容，已保留兼容版本并暂停自动更新。请停止后重新启动该账号浏览器。',{role:'alert'})).catch(()=>{});},
       "browser-identity":info=>{void window.xingchanBridge?.recordBrowserName({uid:this.uid,...info}).then(()=>window.dispatchEvent(new Event('fusion-login-verified'))).catch(()=>{});},
+      "session-displaced":info=>{void window.xingchanBridge?.reportSessionDisplacement({uid:this.uid,leaseId:this.fusionLease?.id,reason:info?.reason,platform:info?.platform,source:info?.source}).catch(()=>{});void this.close().catch(()=>{});},
       launched: async () => {
         if(!this.startupController.signal.aborted&&this.status==="launching")this.status = "launched";
       },
@@ -1746,7 +1747,7 @@ const _sfc_main$b = /* @__PURE__ */ defineComponent({
         createBaseVNode("span", {
           class: "logo",
           style: { "cursor": "pointer", "-webkit-app-region": "no-drag" },
-          role:"button",tabindex:0,title:"关于学不通 2.5.12","aria-label":"关于学不通",
+          role:"button",tabindex:0,title:"关于学不通 2.5.13","aria-label":"关于学不通",
           onClick:openFusionAbout,onKeydown:event=>{if(event.key==='Enter'||event.key===' ')openFusionAbout(event);}
         }, [..._cache[3] || (_cache[3] = [
           createBaseVNode("img", {
@@ -3347,7 +3348,7 @@ const _sfc_main$4 = /* @__PURE__ */ defineComponent({
               return;
             }
             step.description = "未检测到受支持的本地浏览器。";
-            step.error = "请在“软件设置”中选择本机受支持的浏览器可执行文件并重试；如果内置浏览器文件缺失，请使用学不通 2.5.12 安装包进行本地修复。";
+            step.error = "请在“软件设置”中选择本机受支持的浏览器可执行文件并重试；如果内置浏览器文件缺失，请使用学不通 2.5.13 安装包进行本地修复。";
           }
         });
         state.steps.push({
@@ -3678,7 +3679,7 @@ function activeIpcRenderListener() {
   });
   ipcRenderer.on("detect-new-app-version", (_event, new_version) => {
     if(!new_version)return;
-    Modal.confirm({title:"学不通统一更新",content:"请使用学不通的统一安装包更新或修复软件。来自基础组件的版本信息仅供参考；本地版本为学不通 2.5.12。",okText:"关于与版本",cancelText:"关闭",maskClosable:false,onOk:()=>openFusionAbout()});
+    Modal.confirm({title:"学不通统一更新",content:"请使用学不通的统一安装包更新或修复软件。来自基础组件的版本信息仅供参考；本地版本为学不通 2.5.13。",okText:"关于与版本",cancelText:"关闭",maskClosable:false,onOk:()=>openFusionAbout()});
   });
 }
 const _sfc_main$3 = /* @__PURE__ */ defineComponent({
@@ -3785,12 +3786,12 @@ const _hoisted_8$1 = {
   key: 0,
   class: "ms-2 sider-item-title text-secondary"
 };
-const _hoisted_9$1 = {class:"text-secondary version mb-1 ms-2",role:"button",tabindex:0,title:"关于学不通 2.5.12","aria-label":"关于学不通版本","data-fusion-native-about":"true",style:{cursor:"pointer"},onClick:openFusionAbout,onKeydown:event=>{if(event.key==='Enter'||event.key===' ')openFusionAbout(event);}};
+const _hoisted_9$1 = {class:"text-secondary version mb-1 ms-2",role:"button",tabindex:0,title:"关于学不通 2.5.13","aria-label":"关于学不通版本","data-fusion-native-about":"true",style:{cursor:"pointer"},onClick:openFusionAbout,onKeydown:event=>{if(event.key==='Enter'||event.key===' ')openFusionAbout(event);}};
 const _sfc_main$1 = /* @__PURE__ */ defineComponent({
   __name: "index",
   setup(__props) {
     const { ipcRenderer: ipcRenderer2 } = electron;
-    const version = ref("学不通 2.5.12");
+    const version = ref("学不通 2.5.13");
     const currentRoute = useRouter().currentRoute;
     const state = reactive({
       sideBarWidth: computed(() => store.render.setting.showSideBarText ? 142 : 56)

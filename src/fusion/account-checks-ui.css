@@ -18,3 +18,4 @@ body[arco-theme='dark'] .xc-check-state{color:#d7e0ed;background:#364152}body[ar
 @media(max-width:650px){.xc-environment-body .xc-poc-field{grid-template-columns:1fr}.xc-environment-actions{justify-content:flex-start}}
 .xc-environment-body .xc-poc-input::placeholder{color:var(--color-text-3,#63748b);opacity:1}body[arco-theme='dark'] .xc-environment-actions>.xc-poc-button{color:#c1dcff;background:#263d57;border-color:#526e91}
 body[arco-theme='dark'] .fusion-login-clear{color:#d7e4f4;background:#303b49;border-color:#526176}
+.xc-poc-method-verification{justify-self:start;max-width:100%;overflow-wrap:anywhere}

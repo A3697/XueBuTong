@@ -183,7 +183,7 @@
     const originalStar=isStar&&s?.starEnhancementsEnabled===false;view.speedInput.disabled=originalStar;view.speedButton.disabled=originalStar||view.speedSaving;view.speedInput.parentElement.parentElement.hidden=originalStar;
     set(view.speedHint,isStar?(state.prefs.autoVideo2x!==false?'自动 1× / 2× 已开启':'1～1000× · 下一视频生效'):'1～16× · 立即生效');
     set(view.name,item.name);set(view.meta,isStar?(s?.displayName?'登录姓名：'+s.displayName:'星蝉日志'):'浏览器画面');
-    set(view.mode,isStar?(originalStar?'星蝉 1.3 原生':'星蝉'):'浏览器');view.mode.className='fusion-badge fusion-badge-kind';
+    set(view.mode,isStar?(originalStar?'星蝉 1.3.1 原生':'星蝉'):'浏览器');view.mode.className='fusion-badge fusion-badge-kind';
     set(view.status,label[current]||current);view.status.className='fusion-badge fusion-state-'+current;
     view.login.hidden=!isStar;set(view.login,s?.loggedIn?'已登录':'未登录');view.login.className='fusion-badge '+(s?.loggedIn?'fusion-state-running':'fusion-state-stopped');
     set(view.message,isStar?s?.summary||'星蝉已停止。':nativeBusy?'浏览器正在启动或停止…':nativeLive?'':'浏览器已停止。');

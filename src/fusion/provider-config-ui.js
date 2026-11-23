@@ -15,7 +15,7 @@
   const A=window.FusionAIConfig,B=window.FusionQuestionBanks;
   const loaded=await bridge.getQuestionBankConfiguration({uid});if(signal?.aborted)return;if(loaded.uid!==uid)throw Error('题库配置账号不匹配');
   let banks=B.parse(loaded.json).banks,ais=clone(snapshot.aiConfigurations||[]),methods=clone(snapshot.searchMethods),universalCleared=false,active=true,tab=initialTab;
-  const body=el('div','fusion-provider-config'),tabs=el('div','fusion-provider-tabs'),content=el('div','fusion-provider-content'),note=el('p','xc-poc-note','题库与开关点击“确定”保存；搜题酱账号管理和登录操作立即保存。');
+  const body=el('div','fusion-provider-config'),tabs=el('div','fusion-provider-tabs'),content=el('div','fusion-provider-content'),note=el('p','xc-poc-note','题库配置及总开关点击“确定”保存；搜题酱账号管理、独立题库开关和登录操作立即保存。');
   tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','题库类型');body.append(tabs,note,content);
   const pages=new Map(),tabButtons=new Map();let child=null;
   for(const [key,label]of [['banks','普通题库'],['soutijiang','大学搜题酱'],['ai','AI'],['universal','万能题库']]){

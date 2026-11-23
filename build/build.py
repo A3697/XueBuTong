@@ -1,4 +1,4 @@
-"""Reconstruct the reviewed 2.5.12 baseline and compile its offline installer.
+"""Reconstruct the reviewed 2.5.13 baseline and compile its offline installer.
 
 Never launches the application or installer, downloads dependencies, edits the
 source/dependency trees, or accepts an unreviewed payload by refreshing hashes.
@@ -104,6 +104,15 @@ def claim_empty(path):
     path.mkdir(parents=True, exist_ok=True)
 
 
+def verify_panel_version(source, version):
+    """Static previews and link cards must show the same version as the app."""
+    panel = (source/'src/star-panel/index.html').read_text(encoding='utf-8-sig')
+    title = re.findall(r'<title>([^<]*)</title>', panel)
+    badge = re.findall(r'<small\s+id="version">([^<]*)</small>', panel)
+    if title != ['学不通 ' + version] or badge != ['v' + version]:
+        raise ValueError('星蝉控制面板的网页标题或版本标记与 fusion-install.json 不一致。')
+
+
 def build(args):
     source, deps, work, output = map(absolute, (args.source_root, args.dependency_root, args.work_root, args.output_root))
     roots = (source, deps, work, output)
@@ -118,7 +127,7 @@ def build(args):
     if sys.version_info[:3] != (3, 14, 4):
         raise ValueError('必须使用离线依赖内的 Python 3.14.4，请通过 build.ps1 构建。')
     claim_empty(work)
-    report = {'schema': 1, 'version': '2.5.12', 'status': 'running', 'stages': [],
+    report = {'schema': 1, 'version': '2.5.13', 'status': 'running', 'stages': [],
               'sourceRoot': str(source), 'dependencyRoot': str(deps), 'workRoot': str(work),
               'outputRoot': str(output), 'applicationStarted': False, 'installerExecuted': False,
               'networkUsed': False, 'startedAt': time.strftime('%Y-%m-%dT%H:%M:%S%z')}
@@ -140,10 +149,11 @@ def build(args):
         if digest(source/'build/Launcher.cs') != provenance['launcherSourceSha256'] or digest(deps/'runtime/学不通.exe') != provenance['launcherBinarySha256']:
             raise ValueError('启动器源代码与预编译文件的来源摘要不匹配。')
         metadata = json.loads((source/'fusion-install.json').read_text(encoding='utf-8-sig'))
-        if (metadata['version'] != '2.5.12' or provenance['pythonVersion'] != '3.14.4'
+        if (metadata['version'] != '2.5.13' or provenance['pythonVersion'] != '3.14.4'
                 or metadata['dependencies']['ocs'] != provenance['ocsVersion']
                 or metadata['dependencies']['xingchan'] != provenance['xingchanVersion']):
             raise ValueError('组件版本与发布基线不匹配。')
+        verify_panel_version(source, metadata['version'])
         record('component-provenance', python='3.14.4', ocs=provenance['ocsVersion'], xingchan=provenance['xingchanVersion'])
 
         candidate = work/'candidate'

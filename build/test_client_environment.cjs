@@ -21,6 +21,13 @@ test('unsafe or malformed UA and device fields are rejected before persistence',
  for(const input of [{deviceId:'bad'},{schildWebview:'a'.repeat(31)},{model:'Model; fake)'},{webviewBase:'Mozilla/5.0\nX-Header: injected'},{dalvikBase:'X (schild:bad)'},{chromeVersion:'not-a-version'}])assert.throws(()=>Environment.normalize(input));
  assert.equal(Environment.normalize({deviceId:'A'.repeat(32)}).deviceId,'a'.repeat(32));
 });
+test('complete UA overrides are optional single-line fields and are cleared for cloned identities',()=>{
+ const webviewFull='FixtureWebView/2.0 (schild:'+'1'.repeat(32)+') ChaoXingStudy_fixture',dalvikFull='FixtureDalvik/2.0';
+ const p=Environment.normalize({webviewFull,dalvikFull});assert.equal(p.webviewFull,webviewFull);assert.equal(p.dalvikFull,dalvikFull);assert.equal(Environment.normalize({model:'Legacy'}).webviewFull,'');
+ for(const key of ['webviewFull','dalvikFull'])for(const value of ['a\r\nX-Test: value','a\n','a\tb','含中文','a'.repeat(2049),1])assert.throws(()=>Environment.normalize({[key]:value}));
+ const cloned=Environment.forClone({...p,deviceId:'a'.repeat(32),schildWebview:'b'.repeat(32)});for(const key of ['webviewFull','dalvikFull','deviceId','schildWebview','schildDalvik'])assert.equal(cloned[key],'');
+ assert.equal(Environment.randomFingerprint().webviewFull,'');assert.equal(Environment.randomFingerprint().dalvikFull,'');
+});
 test('saved device settings survive restart and duplicate rejection preserves prior settings',t=>{
  const controller=fixture(t),a='a'.repeat(32),b='b'.repeat(32),id='1'.repeat(32);
  let settings=controller.getSettings({uid:a});controller.saveSettings({uid:a,expectedRevision:settings.revision,settings:{...settings,searchMethods:settings.searchMethods.filter(method=>method.id!=='yanxi'),clientEnvironment:{deviceId:id,model:'Pixel 7'}}});

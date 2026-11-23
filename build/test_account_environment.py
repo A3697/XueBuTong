@@ -58,7 +58,8 @@ def child(args):
     client = AuthClient(store=store)
     device = ua.device_id(store)
     result = {'mode': args.mode, 'deviceHash': hashlib.sha256(device.encode()).hexdigest(),
-              'uaDeviceBound': client.session.headers['User-Agent'].endswith('_' + device),
+              'uaDeviceBound': (client.session.headers['User-Agent'] == preferences['dalvikFull']
+                                if preferences.get('dalvikFull') else client.session.headers['User-Agent'].endswith('_' + device)),
               'ownerBound': store.get(OWNER_KEY) == args.uid}
     assert result['uaDeviceBound'] and result['ownerBound']
     # Inspect the actual request sent by the shipped HTTP client, not just a
@@ -73,11 +74,15 @@ def child(args):
             assert device == p['deviceId']
         for name, field in (('WEBVIEW', 'schildWebview'), ('DALVIK', 'schildDalvik')):
             header = getattr(ua, name + '_UA')
+            complete = p['webviewFull' if name == 'WEBVIEW' else 'dalvikFull']
+            if complete:
+                assert header == complete
+                continue
             assert '(device:' + p['model'] + ')' in header
             if p[field]:
                 assert '(schild:' + p[field] + ')' in header
-        assert ua.WEBVIEW_UA.startswith(p['webviewBase'] or ('Mozilla/5.0 (Linux; Android ' + p['androidVersion']))
-        assert ua.DALVIK_UA.startswith(p['dalvikBase'] or ('Dalvik/2.1.0 (Linux; U; Android ' + p['androidVersion']))
+        assert p['webviewFull'] or ua.WEBVIEW_UA.startswith(p['webviewBase'] or ('Mozilla/5.0 (Linux; Android ' + p['androidVersion']))
+        assert p['dalvikFull'] or ua.DALVIK_UA.startswith(p['dalvikBase'] or ('Dalvik/2.1.0 (Linux; U; Android ' + p['androidVersion']))
         result['customHeadersConfirmed'] = True
     if args.mode == 'seed':
         client.session.get(args.base + '/seed?label=' + args.label, timeout=5).raise_for_status()
@@ -221,6 +226,25 @@ def main():
         changed = {**custom, 'webviewBase': 'FixtureWebView/1.0', 'dalvikBase': 'FixtureDalvik/1.0'}
         run('changed-preferences', 'custom', 'd' * 32, 'CUSTOM', changed)
         run('seed', 'custom', 'd' * 32, 'CUSTOM', changed)
+        run('restore', 'custom', 'd' * 32, 'CUSTOM', changed)
+        full_webview = {**changed, 'webviewFull': 'FixtureWebView/2.0 (schild:fixture) (@Kalimdor)_fixture'}
+        run('changed-preferences', 'custom', 'd' * 32, 'CUSTOM', full_webview)
+        run('seed', 'custom', 'd' * 32, 'CUSTOM', full_webview)
+        run('restore', 'custom', 'd' * 32, 'CUSTOM', full_webview)
+        full_both = {**full_webview, 'dalvikFull': 'FixtureDalvik/2.0 (device:fixture)'}
+        run('changed-preferences', 'custom', 'd' * 32, 'CUSTOM', full_both)
+        run('seed', 'custom', 'd' * 32, 'CUSTOM', full_both)
+        run('restore', 'custom', 'd' * 32, 'CUSTOM', full_both)
+        run('changed-preferences', 'custom', 'd' * 32, 'CUSTOM', changed)
+        run('seed', 'custom', 'd' * 32, 'CUSTOM', changed)
+        run('restore', 'custom', 'd' * 32, 'CUSTOM', changed)
+        # An old saved config has neither full-UA field. Upgrading with the
+        # empty defaults must retain its cookies and login rather than log out.
+        state_file = root / 'custom/storage/state.json'
+        legacy_state = json.loads(state_file.read_text('utf-8'))
+        for field in ('webviewFull', 'dalvikFull'):
+            legacy_state['integration.client_preferences'].pop(field)
+        state_file.write_text(json.dumps(legacy_state), encoding='utf-8')
         run('restore', 'custom', 'd' * 32, 'CUSTOM', changed)
         run('changed-preferences', 'custom', 'd' * 32, 'CUSTOM')
         imported = run('seed', 'imported', 'QA_lifecycle-b', 'IMPORTED')

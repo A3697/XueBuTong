@@ -1,5 +1,6 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
+const CHANNEL_LINKS=Object.freeze({'ocs-channel':'https://pd.qq.com/g/du8ic7y5zw','xingchan-channel':'https://pd.qq.com/g/x786s240s3'});
 function installAbout({root,app,BrowserWindow,ipcMain,shell,dialog,directNetwork,canUpdate=()=>false,finishClose}){
  let window=null;
  const {GitHubUpdates,PROJECT_URL}=require('./github-updates.cjs');
@@ -15,9 +16,10 @@ function installAbout({root,app,BrowserWindow,ipcMain,shell,dialog,directNetwork
   return{version:metadata.version,dependencies:metadata.dependencies,installerSha256:sha,xingchanLinkStatus:links.xingchanLinkStatus||'',projectUrl:PROJECT_URL};
  });
  ipcMain.handle('xuebutong-about:open',async(event,kind)=>{
-  if(!allowed(event)||!['ocs','xingchan','product','github','releases'].includes(kind))throw Error('页面入口未授权');
+  if(!allowed(event)||!['ocs','xingchan','product','github','releases',...Object.keys(CHANNEL_LINKS)].includes(kind))throw Error('页面入口未授权');
   if(kind==='product'){window.show();window.focus();return true;}
   if(kind==='github'||kind==='releases'){await shell.openExternal(PROJECT_URL+(kind==='releases'?'/releases':''));return true;}
+  if(Object.hasOwn(CHANNEL_LINKS,kind)){await shell.openExternal(CHANNEL_LINKS[kind]);return true;}
   if(kind==='xingchan'){await dialog.showMessageBox(window,{type:'info',title:'星蝉刷课',message:'暂无官网',buttons:['知道了']});return true;}
   const links=JSON.parse(fs.readFileSync(path.join(root,'assets/product-links.json'),'utf8')),url=new URL(links[kind]);
   if(url.protocol!=='https:'||url.username||url.password)throw Error('链接格式不受支持');await shell.openExternal(url.href);return true;

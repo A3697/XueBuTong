@@ -1,11 +1,11 @@
 {
   "product": "ocs-xingchan-fusion",
-  "version": "2.5.12",
-  "build": "20261122-soutijiang-account-pool",
+  "version": "2.5.13",
+  "build": "20261123-xingchan131-course-monitor",
   "includesPersonalData": false,
   "dependencies": {
     "ocs": "2.9.24",
-    "xingchan": "1.3.0",
+    "xingchan": "1.3.1",
     "ocsScript": "5.4.2"
   },
   "distribution": "sanitized",
