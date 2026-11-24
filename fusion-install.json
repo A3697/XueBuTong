@@ -1,7 +1,7 @@
 {
   "product": "ocs-xingchan-fusion",
-  "version": "2.5.13",
-  "build": "20261123-xingchan131-course-monitor",
+  "version": "2.5.14",
+  "build": "20261123-souti-judgement-rotation",
   "includesPersonalData": false,
   "dependencies": {
     "ocs": "2.9.24",

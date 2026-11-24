@@ -1,7 +1,7 @@
 'use strict';
 const MAX_ACCOUNTS=20;
 function normalize(input){
- if(input===undefined)return {items:[{id:'default',remark:'',enabled:true}]};
+ if(input===undefined)return {items:[]};
  if(!input||!Array.isArray(input.items)||input.items.length>MAX_ACCOUNTS)throw Error('搜题酱账号列表无效');
  const seen=new Set();const items=input.items.map(item=>{
   if(!item||typeof item.id!=='string'||!(/^(?:default|[a-f0-9]{24})$/).test(item.id)||seen.has(item.id))throw Error('搜题酱账号标识无效或重复');seen.add(item.id);

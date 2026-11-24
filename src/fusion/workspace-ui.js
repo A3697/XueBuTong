@@ -245,8 +245,20 @@
  }
  async function flushCredentials(){await state.native?.flushFusionLoginFields?.();await state.credentialsReady;await state.credentials?.flush();}
  function syncCredentialsFromStar(uid,settings){state.credentials?.fromStar(uid,settings);}
+ function selectExportAccounts(){
+  const accounts=window.XingchanOCSFusion.model.listBrowsers(window.store),content=node('div','fusion-export-accounts'),toolbar=node('label','fusion-export-select-all'),all=node('input'),count=node('span','xc-poc-note'),list=node('div','fusion-export-account-list');
+  all.type='checkbox';all.checked=accounts.length>0;all.disabled=!accounts.length;toolbar.append(all,document.createTextNode('全选'),count);content.append(toolbar,list);
+  const choices=accounts.map(account=>{const label=node('label','fusion-export-account'),input=node('input');input.type='checkbox';input.checked=true;input.setAttribute('aria-label','导出 '+account.name);label.append(input,node('span','',account.name));list.append(label);return {uid:account.uid,input};});
+  const selected=()=>choices.filter(item=>item.input.checked).map(item=>item.uid);
+  const refresh=()=>{const n=selected().length;all.checked=n>0&&n===choices.length;all.indeterminate=n>0&&n<choices.length;count.textContent=`已选择 ${n} / ${choices.length} 个账号`;};
+  all.onchange=()=>{for(const item of choices)item.input.checked=all.checked;refresh();};for(const item of choices)item.input.onchange=refresh;refresh();
+  if(!accounts.length)list.append(node('p','xc-poc-note','暂无账号，将仅导出软件通用设置。'));
+  return window.FusionDialogs.open({title:'选择导出账号',message:'默认选择全部账号。仅导出所选账号的配置与排序，软件通用设置一并保留。',content,buttons:['取消导出',accounts.length?'导出所选账号':'导出通用设置'],defaultId:1,cancelId:0,onAction:index=>{if(index===1&&accounts.length&&!selected().length)throw Error('请至少选择一个账号。');}}).result.then(result=>result.response===1?selected():null);
+ }
+ let exportPending=false;
  async function exportData(){
-  try{await window.FusionAccountForm?.flush();await flushCredentials();await window.__fusionSaveStore?.();const result=await state.bridge.exportConfig({ocs:JSON.parse(JSON.stringify(window.store))});if(result?.saved)notify('完整配置已导出。');}catch(error){notify(String(error?.message||'导出失败。'));}
+  if(exportPending)return;exportPending=true;
+  try{await window.FusionAccountForm?.flush();await flushCredentials();await window.__fusionSaveStore?.();const accountUids=await selectExportAccounts();if(accountUids===null)return;const result=await state.bridge.exportConfig({ocs:JSON.parse(JSON.stringify(window.store)),accountUids});if(result?.saved)notify(accountUids.length?'所选 '+accountUids.length+' 个账号的配置已导出。':'软件通用设置已导出。');}catch(error){notify(String(error?.message||'导出失败。'));}finally{exportPending=false;}
  }
  let importPending=false;
  async function importData(input){

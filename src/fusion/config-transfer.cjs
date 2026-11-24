@@ -40,8 +40,17 @@ function entities(render){
 function readJson(file,fallback){return fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):fallback;}
 class ConfigTransfer {
  constructor({root,controller,vault,nativeStore,htmlPreferences,workspacePreferences,modes,applicationSettings}){Object.assign(this,{root,controller,vault,nativeStore,htmlPreferences,workspacePreferences,modes,applicationSettings});}
- snapshot(source){
-  validateJson(source);const ocs=clone(source),accounts=entities(ocs.render),profiles={},runtimeSettings={},accountAssets={},nativeStar={};
+ snapshot(source,selectedUids){
+  validateJson(source);const ocs=clone(source),known=entities(ocs.render);
+  if(selectedUids!==undefined){
+   if(!Array.isArray(selectedUids)||new Set(selectedUids).size!==selectedUids.length||selectedUids.some(uid=>!known.has(uid))||known.size>0&&!selectedUids.length)throw Error('请选择有效的导出账号');
+   const selected=new Set(selectedUids);
+   function retain(group){for(const [uid,item]of Object.entries(group.children)){if(item.type==='browser'?!selected.has(uid):!retain(item))delete group.children[uid];}return Object.keys(group.children).length>0;}
+   retain(ocs.render.browser.root);
+   ocs.render.browser.currentBrowserUid='';ocs.render.browser.currentFolderUid=ocs.render.browser.root.uid;
+   ocs.render.browser.search={value:'',tags:[]};
+  }
+  const accounts=entities(ocs.render),profiles={},runtimeSettings={},accountAssets={},nativeStar={};
   ocs.render.browser.accountOrders=AccountOrder.snapshot(ocs.render.browser);
   delete ocs.server;delete ocs.name;delete ocs.version;
   for(const item of accounts.values())item.cachePath='$CACHE_PATH';
@@ -49,7 +58,7 @@ class ConfigTransfer {
   for(const uid of accounts.keys()){
    const stored=this.controller.data.profiles[uid],p=stored||{ai:{baseUrl:'',model:'',type:'openai'}};
    // Freeze each account's effective values, including inherited legacy OCS settings.
-   profiles[uid]={browserScript:require('./browser-script-selection.cjs').normalize(p.browserScript),soutijiangAccounts:require('./soutijiang-accounts.cjs').normalize(p.soutijiangAccounts),soutijiangEnabled:p.soutijiangEnabled===true,ocsEnhancementsEnabled:typeof p.ocsEnhancementsEnabled==='boolean'?p.ocsEnhancementsEnabled:ocs.render.setting?.fusionOcsPlugins?.enhanced!==false,username:p.username||'',schoolId:p.schoolId||'',...loginMetadata(p),starEnhancementsEnabled:p.starEnhancementsEnabled!==false,enrollmentYear:Enrollment.normalize(p.enrollmentYear),keepPlayingOnLeave:p.keepPlayingOnLeave===true,clientEnvironment:ClientEnvironment.normalize(p.clientEnvironment),ai:clone(p.ai),answerSettings:AnswerSettings.normalize(p.answerSettings??AnswerSettings.fromOcsStore(ocs.render.setting?.ocs?.store)),questionStrategy:p.questionStrategy,searchMethods:normalizeSearchMethods(p.searchMethods,p.questionStrategy),displayName:p.displayName||'',nameSource:NAME_SOURCES.has(p.nameSource)?p.nameSource:'',verifiedDetails:p.verifiedDetails?require('./login-api.cjs').information(p.verifiedDetails):null,secrets:Object.fromEntries(SECRET_KEYS.map(key=>[key,stored?this.controller.plainSecret(uid,key):'']))};
+   profiles[uid]={browserScript:require('./browser-script-selection.cjs').normalize(p.browserScript),soutijiangAccounts:this.controller.soutijiang?.definition?.(uid)??require('./soutijiang-accounts.cjs').normalize(p.soutijiangAccounts),soutijiangEnabled:p.soutijiangEnabled===true,ocsEnhancementsEnabled:typeof p.ocsEnhancementsEnabled==='boolean'?p.ocsEnhancementsEnabled:ocs.render.setting?.fusionOcsPlugins?.enhanced!==false,username:p.username||'',schoolId:p.schoolId||'',...loginMetadata(p),starEnhancementsEnabled:p.starEnhancementsEnabled!==false,enrollmentYear:Enrollment.normalize(p.enrollmentYear),keepPlayingOnLeave:p.keepPlayingOnLeave===true,clientEnvironment:ClientEnvironment.normalize(p.clientEnvironment),ai:clone(p.ai),answerSettings:AnswerSettings.normalize(p.answerSettings??AnswerSettings.fromOcsStore(ocs.render.setting?.ocs?.store)),questionStrategy:p.questionStrategy,searchMethods:normalizeSearchMethods(p.searchMethods,p.questionStrategy),displayName:p.displayName||'',nameSource:NAME_SOURCES.has(p.nameSource)?p.nameSource:'',verifiedDetails:p.verifiedDetails?require('./login-api.cjs').information(p.verifiedDetails):null,secrets:Object.fromEntries(SECRET_KEYS.map(key=>[key,stored?this.controller.plainSecret(uid,key):'']))};
    nativeStar[uid]=NativeStar.snapshot(this.root,uid);
    const state=readJson(path.join(this.root,'instances',uid,'data/storage/state.json'),{});
    const settings=Object.fromEntries(Object.entries(state).filter(([key])=>customKey(key)));
@@ -67,7 +76,11 @@ class ConfigTransfer {
    const content=fs.readFileSync(file);if(content.length>8*1024*1024)throw Error('本地脚本超过 8 MB，请单独备份。');
    const digest=crypto.createHash('sha256').update(content).digest('hex');assets.push({ref,sha256:digest,name:path.basename(file),content:content.toString('base64')});
   }
-  return {...ocs,fusion:{format:'ocs-xingchan-settings',schema:1,profiles,runtimeSettings,accountAssets,nativeStar,windowSizes:WindowSizes.snapshot(this.root),htmlPreferences:Object.fromEntries([...accounts.keys()].map(uid=>[uid,this.htmlPreferences.get(uid)])),workspace:this.workspacePreferences.get(),applicationSettings:clone(this.applicationSettings?.data||{schema:1,items:{}}),assets}};
+  const workspace=clone(this.workspacePreferences.get());
+  for(const key of ['launchPlans','speeds'])if(workspace[key])workspace[key]=Object.fromEntries(Object.entries(workspace[key]).filter(([uid])=>accounts.has(uid)));
+  if(Array.isArray(workspace.cardOrder))workspace.cardOrder=workspace.cardOrder.filter(uid=>accounts.has(uid));
+  const windowSizes=Object.fromEntries(Object.entries(WindowSizes.snapshot(this.root)).filter(([key])=>key==='main'||accounts.has(key.replace(/^(?:browser|panel)-/,''))));
+  return {...ocs,fusion:{format:'ocs-xingchan-settings',schema:1,profiles,runtimeSettings,accountAssets,nativeStar,windowSizes,htmlPreferences:Object.fromEntries([...accounts.keys()].map(uid=>[uid,this.htmlPreferences.get(uid)])),workspace,applicationSettings:clone(this.applicationSettings?.data||{schema:1,items:{}}),assets}};
  }
  parse(text,{preserveScriptRefs=false}={}){
   if(typeof text!=='string'||Buffer.byteLength(text,'utf8')>64*1024*1024)throw Error('配置文件超过 64 MB');

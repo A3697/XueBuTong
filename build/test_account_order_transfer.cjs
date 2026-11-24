@@ -7,6 +7,32 @@ const doc=(items,orders)=>({render:{browser:{root:folder('root',items),...(order
 const ids=(document,uid='root')=>Order.snapshot(document.render.browser)[uid];
 const transfer=()=>new ConfigTransfer({root:path.resolve('nonexistent-order-fixture'),controller:{data:{profiles:{}},plainSecret:()=>''},nativeStore:{store:{paths:{userDataDirsFolder:path.resolve('nonexistent-order-fixture/cache')}}},vault:{encryptString:v=>Buffer.from(v)},htmlPreferences:{get:()=>({})},workspacePreferences:{get:()=>({})}});
 
+test('selected export prunes unselected credentials, per-account data and empty groups without modifying the source',t=>{
+ const fs=require('node:fs'),os=require('node:os'),Sizes=require('../src/fusion/window-sizes.cjs');
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'xbt-export-selection-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ const source=doc([account('a','root','kept-login'),account('secret-b','root','excluded-login'),folder('group',[account('x'),account('secret-y','group','excluded-nested-login')]),folder('empty',[account('secret-z')])],{root:['secret-b','a'],group:['secret-y','x'],empty:['secret-z']});
+ source.render.browser.currentBrowserUid='secret-b';source.render.browser.currentFolderUid='empty';source.render.browser.search={value:'excluded-login',results:[source.render.browser.root.children['secret-b']]};
+ const before=JSON.stringify(source),tr=transfer();tr.root=root;tr.controller={data:{profiles:Object.fromEntries(['a','secret-b','x','secret-y','secret-z'].map(uid=>[uid,{username:uid,ai:{type:'openai',baseUrl:'',model:''}}]))},plainSecret:(uid,key)=>key==='password'?uid+'-private-secret':''};
+ tr.workspacePreferences={get:()=>({cardOrder:['secret-b','x','a'],launchPlans:{a:{autoMode:'off'},'secret-b':{autoMode:'xingchan'}},speeds:{a:2,'secret-b':1},columns:3})};
+ tr.htmlPreferences={get:uid=>({fixtureOwner:uid})};
+ for(const uid of ['a','secret-b']){const file=path.join(root,'instances',uid,'data/storage/state.json');fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,JSON.stringify({'config.fixture_owner':uid}));Sizes.write(root,'browser-'+uid,{width:1000,height:800});}
+ Sizes.write(root,'main',{width:1200,height:900});
+ const out=tr.snapshot(source,['x','a']),serialized=JSON.stringify(out);
+ for(const text of ['secret-b','secret-y','secret-z','excluded-login','excluded-nested-login'])assert(!serialized.includes(text),text+' leaked');
+ assert.deepEqual(Object.keys(out.fusion.profiles),['a','x']);assert.equal(out.fusion.profiles.a.secrets.password,'a-private-secret');
+ assert.deepEqual(out.render.browser.accountOrders,{root:['a'],group:['x']});assert.equal(out.render.browser.currentFolderUid,'root');assert.deepEqual(out.render.browser.search,{value:'',tags:[]});
+ assert.deepEqual(out.fusion.workspace,{cardOrder:['x','a'],launchPlans:{a:{autoMode:'off'}},speeds:{a:2},columns:3});assert.deepEqual(Object.keys(out.fusion.windowSizes).sort(),['browser-a','main']);assert.equal(out.fusion.runtimeSettings.a['config.fixture_owner'],'a');
+ assert.deepEqual(Object.keys(tr.parse(serialized).data.profiles),['a','x']);assert.equal(JSON.stringify(source),before);
+});
+
+test('explicit export selection rejects invalid or empty selection but supports an installation with no accounts',()=>{
+ const tr=transfer(),source=doc([account('a'),account('b')],{root:['b','a']});
+ for(const invalid of [null,[],['missing'],['a','a'],'a'])assert.throws(()=>tr.snapshot(source,invalid),/导出账号/);
+ assert.deepEqual(tr.snapshot(source,['a','b']).render.browser.accountOrders,{root:['b','a']});
+ assert.equal(Object.keys(tr.snapshot(doc([]),[]).fusion.profiles).length,0);
+ assert.equal(Object.keys(tr.snapshot(source).fusion.profiles).length,2);
+});
+
 test('optional OCS enhancement preferences survive export and import into an empty installation',()=>{
  const t=transfer(),source=doc([account('a')]);source.render.setting.fusionOcsPlugins={enhanced:false,selected:'latest',autoUpdate:false};
  const exported=t.snapshot(source),parsed=t.parse(JSON.stringify(exported));exported.render=parsed.render;

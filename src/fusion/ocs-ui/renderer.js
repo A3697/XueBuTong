@@ -53,6 +53,7 @@
 
   function listBrowsers(store) {
     const node = store && store.render && store.render.browser && store.render.browser.root;
+    const orders = store?.render?.browser?.accountOrders || {};
     const result = [], seen = new Set(), ids = new Set();
     function visit(value, depth) {
       if (!value || typeof value !== 'object' || seen.has(value) || depth > 64) return;
@@ -60,7 +61,14 @@
       if (value.type === 'browser' && validUid(value.uid) && !ids.has(value.uid)) {
         ids.add(value.uid); result.push({ uid: value.uid, name: text(value.name) || value.uid });
       } else if ((value.type === 'root' || value.type === 'folder') && value.children && typeof value.children === 'object') {
-        for (const child of Object.values(value.children)) visit(child, depth + 1);
+        const positions = new Map((Array.isArray(orders[value.uid]) ? orders[value.uid] : []).map((uid,index)=>[uid,index]));
+        const children = Object.values(value.children).map((child,index)=>({child,index}));
+        children.sort((a,b)=>{
+          const folderA=a.child?.type!=='browser',folderB=b.child?.type!=='browser';
+          if(folderA!==folderB)return folderA?-1:1;
+          return (folderA?0:(positions.get(a.child.uid)??1e9)-(positions.get(b.child.uid)??1e9))||a.index-b.index;
+        });
+        for (const {child} of children) visit(child, depth + 1);
       }
     }
     visit(node, 0); return result;

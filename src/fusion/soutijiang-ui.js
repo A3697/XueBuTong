@@ -45,7 +45,7 @@
     const rename=button('备注',()=>editRemark(row)),up=button('↑',()=>move(row,-1)),down=button('↓',()=>move(row,1)),del=button('移除',()=>remove(row),{danger:true});
     up.setAttribute('aria-label','上移 '+(row.remark||row.name||'账号'));down.setAttribute('aria-label','下移 '+(row.remark||row.name||'账号'));up.disabled=busy||index===0;down.disabled=busy||index===rows.length-1;rename.disabled=del.disabled=busy;controls.append(manage,rename,up,down,del);card.append(main,controls);list.append(card);
    }
-   if(state&&!rows.length)list.append(el('p','xc-poc-note','尚未保存搜题酱账号，点击“添加账号”后扫码登录。'));
+   if(state&&!rows.length)list.append(el('p','xc-poc-note',selectedId?'尚未登录搜题酱，完成扫码后账号会显示在此处。':'尚未登录搜题酱，点击“添加账号”后扫码登录。'));
    status.textContent=!state?'正在读取登录状态…':!data.installed?'请先安装大学搜题酱官方扩展。':!data.compatible?'当前扩展版本尚未验证，暂不接管。':data.message||(data.loggedIn?'当前查看：'+(data.name||'已登录账号'):'选择账号后恢复登录或获取二维码。');
    const image=typeof data.qrDataUrl==='string'&&/^data:image\/png;base64,/.test(data.qrDataUrl)?data.qrDataUrl:'';qr.hidden=!image||data.loggedIn;if(image)qr.src=image;else qr.removeAttribute('src');
    add.disabled=busy||rows.length>=20;install.hidden=!!data.installed;install.disabled=busy;login.hidden=open.hidden=data.loggedIn===true;login.disabled=open.disabled=busy||!ready||!selectedId;refresh.disabled=busy||!ready||!selectedId;logout.hidden=!data.loggedIn;logout.disabled=busy;
@@ -58,7 +58,7 @@
   const select=el('select','xc-poc-input'),status=el('span','fusion-souti-selector-status'),label=el('label','fusion-souti-selector-label');
   select.setAttribute('aria-label','搜题酱插件登录账号');select.disabled=true;status.setAttribute('role','status');
   label.append(el('span','','搜题酱插件登录账号'),select);host.append(label,status);
-  host.title='与题库配置共用账号列表及每份登录凭据。手动选择后固定插件登录，不改变题库使用顺序；题库仍按顺序使用开启“用于题库”的账号，额度轮换不会覆盖手动选择。保存后数秒内同步至已启动浏览器。';
+  host.title='与题库配置共用账号列表及每份登录凭据。手动选择设置插件当前登录；官方明确提示该类搜题额度耗尽后，按列表顺序切换到下一可用登录。登录失效、验证或限流时不轮换。题库只使用开启“用于题库”的账号，不影响插件轮换。保存后数秒内同步至已启动浏览器。';
   const active=()=>alive&&isActive();
   function render(){
    if(!active())return;const rows=state?.accounts||[],signature=JSON.stringify(rows.map(row=>[row.id,row.remark,row.name,row.configured]));

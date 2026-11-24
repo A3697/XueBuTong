@@ -13,7 +13,7 @@ if (-not $WorkRoot) {
     $taskLeaf = (Split-Path -Leaf $taskSourceRoot) + '-' + $taskStamp
     $WorkRoot = Join-Path (Join-Path $taskParent 'XueBuTong_构建缓存') $taskLeaf
 }
-if (-not $OutputRoot) { $OutputRoot = Join-Path (Join-Path $taskParent 'XueBuTong_发行包') '2.5.13-20261123' }
+if (-not $OutputRoot) { $OutputRoot = Join-Path (Join-Path $taskParent 'XueBuTong_发行包') '2.5.14-20261123' }
 function Resolve-BuildPath([string]$Value) {
     if (-not [IO.Path]::IsPathRooted($Value)) { $Value = Join-Path (Get-Location).ProviderPath $Value }
     return [IO.Path]::GetFullPath($Value)

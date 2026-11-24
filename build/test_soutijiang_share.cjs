@@ -2,9 +2,20 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),http=require('node:http'),{EventEmitter}=require('node:events');
 const Auth=require('../src/fusion/soutijiang-auth.cjs'),Broker=require('../src/fusion/soutijiang-broker.cjs');
 const token='ab'.repeat(32),login=id=>({schema:1,storage:{college_ai_userInfo:JSON.stringify({uid:id}),college_ai_dxuss:JSON.stringify('private-'+id)},cookies:[]});
-function browserModule(){const module={exports:{}};const auth={...Auth,read:async context=>structuredClone(context.snapshot),apply:async(context,value)=>{context.applied++;context.snapshot=structuredClone(value);}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../src/fusion/soutijiang-browser.cjs'),'utf8'),{module,exports:module.exports,require:name=>name==='./soutijiang-auth.cjs'?auth:require(name),Buffer,setTimeout,clearTimeout});return module.exports;}
+function browserModule(){const module={exports:{}};const auth={...Auth,read:async context=>structuredClone(context.snapshot),apply:async(context,value)=>{context.applied++;context.snapshot=structuredClone(value);}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../src/fusion/soutijiang-browser.cjs'),'utf8'),{module,exports:module.exports,require:name=>name==='./soutijiang-auth.cjs'?auth:name==='./soutijiang-browser-quota.cjs'?require('../src/fusion/soutijiang-browser-quota.cjs'):require(name),Buffer,setTimeout,clearTimeout});return module.exports;}
 async function serverFor(t,handler){const requests=[],server=http.createServer((req,res)=>{let parts=[];req.on('data',part=>parts.push(part));req.on('end',()=>{const data=JSON.parse(Buffer.concat(parts));requests.push({data,headers:req.headers,path:req.url});Promise.resolve(handler(data,res,requests.length)).catch(()=>{res.statusCode=500;res.end();});});});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>new Promise(resolve=>server.close(resolve)));return {requests,port:server.address().port};}
 function respond(res,value){res.setHeader('Content-Type','application/json');res.end(JSON.stringify(value));}
+test('a browser official quota response triggers one exchange and updates shared authentication',async t=>{
+ let rotated=false,revision=0;const server=await serverFor(t,(data,res)=>{if(data.action==='quota'){rotated=true;return respond(res,{rotated:true,message:'switched'});}respond(res,{revision:++revision,snapshot:rotated?login('two'):null});});
+ const context=new EventEmitter();context.snapshot=login('one');context.applied=0;const notices=[];const client=await browserModule().attach(context,{port:server.port,token,onError:message=>notices.push(message)});
+ try{
+  const request={url:()=> 'https://www.daxuesoutijiang.com/dxai/submit/exercise/solve',serviceWorker:()=>({url:()=> 'chrome-extension://'+Auth.EXTENSION_ID+'/static/background/index.js'})};
+  context.emit('request',request);context.emit('response',{request:()=>request,allHeaders:async()=>({}),text:async()=>'{"errNo":4002}'});
+  const deadline=Date.now()+3000;while(Auth.user(context.snapshot).providerUid!=='two'&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,10));
+  assert.equal(Auth.user(context.snapshot).providerUid,'two');assert.equal(server.requests.filter(x=>x.data.action==='quota').length,1);assert.equal(notices[0],'switched');
+  context.emit('response',{request:()=>request,allHeaders:async()=>({}),text:async()=>'{"errNo":4002}'});await new Promise(resolve=>setTimeout(resolve,20));assert.equal(server.requests.filter(x=>x.data.action==='quota').length,1);
+ }finally{await client.dispose();}assert.equal(context.listenerCount('response'),0);
+});
 
 test('broker rejects browser origins and non-loopback requests before forwarding credentials',async()=>{
  const calls=[];Broker.install({exchange:async(key,input)=>{calls.push({key,input});if(key!==token)throw Error('private failure');return {revision:1,snapshot:null};}});

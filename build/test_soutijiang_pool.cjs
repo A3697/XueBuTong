@@ -5,9 +5,55 @@ const question={type:'single',title:'一加一等于多少？',options:[{label:'
 const hit={message:{errNo:0,list:[{question:question.title,answer:'2'}]}};
 const empty=()=>({schema:1,storage:{},cookies:[]});
 const login=id=>({schema:1,storage:{college_ai_userInfo:JSON.stringify({uid:id,nickname:'用户 '+id}),college_ai_dxuss:JSON.stringify('private-'+id),college_ai_sourceAppId:'"collegepcpi"'},cookies:[{name:'DXUSS',value:'private-'+id,domain:'passport.daxuesoutijiang.com',path:'/',secure:true,httpOnly:true,sameSite:'no_restriction'}]});
+test('new unlogged account has no implicit slot; verified legacy login survives migration',async t=>{
+ const f=fixture(t);delete f.profiles.A.soutijiangAccounts;
+ assert.deepEqual(Accounts.normalize(undefined),{items:[]});assert.deepEqual(f.pool.view('A').accounts,[]);
+ await f.pool.state('A',{connect:true});assert.equal(f.pool.current.has('A'),false);
+ // Merely creating an old profile directory is not proof of a saved login.
+ fs.mkdirSync(f.pool.profile('A','default'),{recursive:true});assert.deepEqual(f.pool.view('A').accounts,[]);
+ f.pool.engine.bindings.A={configured:true};f.seed('A','default','one');await f.pool.state('A',{connect:true});assert.equal(f.pool.view('A').accounts.length,1);assert.equal(f.pool.view('A').name,'用户 one');
+ const reload=f.reload();assert.equal(reload.definition('A').items[0].id,'default');
+});
+test('an empty account list accepts the browser existing login without adding a placeholder',async t=>{
+ const f=fixture(t);delete f.profiles.A.soutijiangAccounts;
+ const result=await f.pool.exchange(f.pool.ticket('A').token,{snapshot:login('one'),revision:0});
+ assert.equal(f.pool.view('A').accounts.length,1);assert.equal(f.pool.view('A').name,'用户 one');assert.notEqual(result.slotId,'default');
+});
+test('pending scans stay out of the account list and repeated Add reuses the pending slot',async t=>{
+ const f=fixture(t);delete f.profiles.A.soutijiangAccounts;
+ const first=await f.pool.change('A',{action:'add'}),second=await f.pool.change('A',{action:'add'});assert.equal(first.selectedId,second.selectedId);assert.deepEqual(first.accounts,[]);assert.deepEqual(second.accounts,[]);assert.equal(f.pool.definition('A').items.length,1);
+ f.seed('A',first.selectedId,'one');const ready=await f.pool.state('A',{slotId:first.selectedId,connect:true});assert.equal(ready.accounts.length,1);
+ await f.pool.logout('A',{slotId:first.selectedId});assert.deepEqual(f.pool.view('A').accounts,[]);
+});
+test('browser solve quota rotates even a manually selected login, independent of bank toggles',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const next=await f.add('A','two');await f.pool.change('A',{action:'set-enabled',id:next,enabled:false});await f.pool.change('A',{action:'select',id:'default'});
+ const ticket=f.pool.ticket('A'),first=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:0});
+ const quota={identity:Auth.identity(login('one')),method:'solve',error:4002,message:''};
+ const result=await f.pool.browserQuota(ticket.token,{revision:first.revision,quota});assert.equal(result.rotated,true);assert.equal(f.pool.browserAccount('A'),'default');
+ assert.equal(f.pool.rows('A')[0].solveExhausted,true);assert.equal(f.pool.rows('A')[0].screenshotExhausted,false);assert.equal(f.calls.length,0);
+ const shared=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:first.revision});assert.equal(Auth.user(shared.snapshot).providerUid,'two');assert.equal(f.pool.browserAccount('A'),next);
+ assert.equal((await f.pool.browserQuota(ticket.token,{revision:shared.revision,quota})).reason,'stale');assert.equal(f.pool.browserAccount('A'),next);
+ const last=await f.pool.browserQuota(ticket.token,{revision:shared.revision,quota:{...quota,identity:Auth.identity(login('two'))}});assert.equal(last.reason,'exhausted');assert.equal(f.pool.browserAccount('A'),next);
+});
+test('browser verification, limits and stale responses cannot rotate accounts',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.add('A','two');const ticket=f.pool.ticket('A'),first=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:0});
+ for(const quota of [{method:'solve',error:410004,message:'请验证'},{method:'solve',error:303,message:'登录失效'},{method:'screenshot',error:500,message:'请求过于频繁'},{method:'solve',error:500,message:'网络异常'}]){assert.equal((await f.pool.browserQuota(ticket.token,{revision:first.revision,quota:{...quota,identity:Auth.identity(login('one'))}})).rotated,false);assert.equal(f.pool.browserAccount('A'),'default');}
+ assert.equal((await f.pool.browserQuota(ticket.token,{revision:first.revision-1,quota:{identity:Auth.identity(login('one')),method:'solve',error:4002}})).reason,'stale');assert.equal(f.pool.rows('A')[0].solveExhausted,false);
+});
+test('browser rotation stops at an invalid next login instead of trying more identities',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const next=await f.add('A','two');await f.add('A','three');f.auth.set(f.pool.profile('A',next),empty());
+ const ticket=f.pool.ticket('A'),first=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:0});
+ assert.equal((await f.pool.browserQuota(ticket.token,{revision:first.revision,quota:{identity:Auth.identity(login('one')),method:'solve',error:4002}})).reason,'login');assert.equal(f.pool.browserAccount('A'),'default');assert.equal(f.calls.length,0);
+});
+test('a fresh manual login during quota checking wins over pending rotation',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});await f.add('A','two');
+ const ticket=f.pool.ticket('A'),first=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:0});
+ await f.pool.browserQuota(ticket.token,{revision:first.revision,quota:{identity:Auth.identity(login('one')),method:'solve',error:4002}});
+ const next=await f.pool.exchange(ticket.token,{snapshot:login('manual-new'),revision:first.revision});assert.equal(next.snapshot,null);assert.equal(f.pool.view('A').name,'用户 manual-new');
+});
 function fixture(t){
  const base=path.resolve(process.env.XBT_TEST_TMP||process.cwd()),root=fs.mkdtempSync(path.join(base,'souti-pool-'));let now=Date.parse('2026-11-22T09:00:00Z');
- const profiles={A:{soutijiangEnabled:true},B:{soutijiangEnabled:true}},auth=new Map(),calls=[],replies=new Map();
+ const profiles={A:{soutijiangEnabled:true,soutijiangAccounts:{items:[{id:'default',remark:''}]}},B:{soutijiangEnabled:true,soutijiangAccounts:{items:[{id:'default',remark:''}]}}},auth=new Map(),calls=[],replies=new Map();
  const factory=async input=>{let closed=false;const file=input.profile;auth.set(file,auth.get(file)||empty());return {
   readAuth:async()=>structuredClone(auth.get(file)),applyAuth:async value=>auth.set(file,structuredClone(Auth.normalize(value))),user:async()=>Auth.user(auth.get(file)),image:async()=> 'data:image/jpeg;base64,Zml4dHVyZQ==',loginQr:async()=>({qrImage:'data:image/png;base64,Zml4dHVyZQ=='}),closed:()=>closed,close:async()=>{closed=true;},
   message:async type=>{if(type==='updateUserInfo')return {};if(type==='LogOut'){auth.set(file,empty());return {success:true};}return request(type);},screenshot:async()=>request('screenshot')
@@ -46,7 +92,7 @@ test('clear no-answer does not spend the next provider account quota',async t=>{
 test('same official login shares quota accounting across local records',async t=>{const f=fixture(t);f.seed('A','default','same');await f.add('A','same');await f.pool.query('A',question);assert.deepEqual(f.pool.view('A').accounts.map(x=>x.screenshotUsed),[1,1]);});
 test('repeated concurrent requests share one official query',async t=>{const f=fixture(t);f.seed('A','default','one');const results=await Promise.all([f.pool.query('A',question),f.pool.query('A',question)]);assert.deepEqual(results[0],results[1]);assert.equal(f.calls.length,1);});
 test('a bank login supplies the plugin without a second login operation',async t=>{
- const f=fixture(t);f.seed('A','default','one');const ticket=f.pool.ticket('A');const result=await f.pool.exchange(ticket.token,{snapshot:empty(),revision:0});assert.equal(Auth.user(result.snapshot).providerUid,'one');assert.equal(f.calls.length,0);assert.equal(f.pool.view('B').accounts[0].configured,false);
+ const f=fixture(t);f.seed('A','default','one');const ticket=f.pool.ticket('A');const result=await f.pool.exchange(ticket.token,{snapshot:empty(),revision:0});assert.equal(Auth.user(result.snapshot).providerUid,'one');assert.equal(f.calls.length,0);assert.deepEqual(f.pool.view('B').accounts,[]);
  assert(!JSON.stringify(f.pool.view('A')).includes('private-'));assert(!fs.readFileSync(f.pool.file,'utf8').includes('private-'));
 });
 test('a login performed in the plugin is adopted by the same owner bank',async t=>{
@@ -109,7 +155,7 @@ test('relogging an already saved official identity replaces its credentials with
 test('an explicit bank logout wins over a stale browser snapshot changed during the logout',async t=>{
  const f=fixture(t);f.seed('A','default','one');const ticket=f.pool.ticket('A'),first=await f.pool.exchange(ticket.token,{snapshot:empty(),revision:0});await f.pool.logout('A',{slotId:'default'});
  const stale=structuredClone(first.snapshot);stale.storage.college_ai_isVp='true';const next=await f.pool.exchange(ticket.token,{snapshot:stale,revision:first.revision});
- assert.equal(Auth.user(next.snapshot).loggedIn,false);assert.equal(f.pool.configured('A'),false);assert.equal(f.pool.view('A').accounts.length,1);
+ assert.equal(Auth.user(next.snapshot).loggedIn,false);assert.equal(f.pool.configured('A'),false);assert.equal(f.pool.view('A').accounts.length,0);
 });
 
 test('a newly scanned bank login is not replaced by the previous browser identity',async t=>{
@@ -151,7 +197,7 @@ test('actual state and account-change handlers retain connection checks for view
  await change({uid:'A',action:'reorder',order:['default',second]});assert.equal(invalidated.length,0);
  await change({uid:'A',action:'reorder',order:[second,'default']});assert.equal(invalidated.length,1);assert.notEqual(f.pool.view('A').connectionKey,before);
  f.auth.set(f.pool.profile('A',second),login('three'));await get({uid:'A',slotId:second,refresh:true});assert.equal(invalidated.length,2);
- const added=await change({uid:'A',action:'add'});assert.equal(invalidated.length,3);await change({uid:'A',action:'remove',id:added.selectedId});assert.equal(invalidated.length,4);
+ const added=await change({uid:'A',action:'add'});assert.equal(invalidated.length,2);await change({uid:'A',action:'remove',id:added.selectedId});assert.equal(invalidated.length,2);
  assert(invalidated.every(([uid,provider])=>uid==='A'&&provider==='soutijiang'));
 });
 
@@ -202,7 +248,7 @@ test('acknowledging the remaining login cannot unblock the removed credentials, 
 });
 
 test('legacy account descriptors default to enabled and reject invalid switch/selection data',()=>{
- assert.equal(Accounts.normalize().items[0].enabled,true);
+ assert.deepEqual(Accounts.normalize(),{items:[]});
  assert.deepEqual(Accounts.normalize({items:[{id:'default',remark:'  legacy  '}]}),{items:[{id:'default',remark:'legacy',enabled:true}]});
  for(const enabled of ['false',0,null])assert.throws(()=>Accounts.normalize({items:[{id:'default',remark:'',enabled}]}),/开关/);
  assert.throws(()=>Accounts.normalize({items:[{id:'default',remark:''}],selectedId:'missing'}),/当前/);

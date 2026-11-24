@@ -42,7 +42,13 @@ function normalizedAnswer(question,value){
   if(question.type==='completion'&&/^\[/.test(value)){try{const parsed=JSON.parse(value);if(Array.isArray(parsed))value=parsed;}catch{}}
  }
  if(Array.isArray(value))value=value.map(item=>typeof item==='string'?plain(item):item);
- if(question.type==='judgement'&&typeof value==='string'&&/^[A-Z]$/.test(value))value=question.options?.find(x=>x.label===value)?.text||value;
+ if(question.type==='judgement'&&typeof value==='string'){
+  // Official screenshot results include e.g. "A. 正确". The text carries the
+  // truth value; its letter belongs to the provider's option order, not ours.
+  const labeled=value.match(/^[A-Z]\s*[.、．:：)）]\s*(.+)$/u);
+  if(labeled)value=labeled[1].trim();
+  else if(/^[A-Z]$/.test(value))value=question.options?.find(x=>x.label===value)?.text||value;
+ }
  try{return require('./gateway/index.cjs').normalizeBankAnswer(question,value);}
  catch{throw new SoutijiangError('soutijiang_answer_invalid','搜题酱答案格式无法可靠匹配当前题目');}
 }
@@ -336,6 +342,10 @@ class SoutijiangManager{
  }
  markQuota(uid,method){
   const identity=this.states.get(uid)?.providerUid;if(!identity)return;
+  this.markIdentityQuota(identity,method);
+ }
+ markIdentityQuota(identity,method){
+  if(!['screenshot','solve'].includes(method)||typeof identity!=='string'||!identity)return;
   const day=dayKey(this.clock()),old=this.quotas[identity];this.quotas[identity]={...(old?.day===day?old:{}),day,[method]:true};
   this.saveQuota();
  }

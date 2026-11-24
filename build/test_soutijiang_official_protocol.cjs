@@ -134,6 +134,7 @@ for(const spec of specs){
   const b=setupSolve(spec),input={base64:'data:image/jpeg;base64,bW9jaw==',questionText:'mock question',options:[{label:'A',text:'one'},{label:'B',text:'two'}],questionType:'single',questionId:'mock-id',index:7,iframeIndex:0,questionFrom:'mock-platform',blankNum:0,historyResult:'[]'};
   const result=await b.handle(input,{tab:{id:1,url:'https://mock.invalid/'}});assert.equal(result.errNo,0);assert.equal(result.result.option,'B');assert.equal(result.result.questionId,'mock-id');assert.equal(result.result.index,7);
   assert.equal(b.requests.length,1);const request=b.requests[0];assert.equal(request.url,'/dxai/submit/exercise/solve');assert.equal(request.options.method,'FILE');assert.equal(request.options.host,'https://www.daxuesoutijiang.com');assert.equal(request.options.needSignature,false);
+  assert.equal(require('../src/fusion/soutijiang-browser-quota.cjs').methodFor(request.options.host+request.url),'solve','browser quota observer recognizes the actual official endpoint');
   const params=request.options.params;assert.equal(params.questionText,'mock question');assert.equal(params.questionType,'single');assert.deepEqual(JSON.parse(params.options),input.options);assert.equal(params.image.type,'image/jpeg');assert.equal(params.image.size,4);assert.match(params.picMD5,/^[0-9a-f]{32}$/);
  });
  test(`official ${spec.version}: solve auth, quota, and verification errors remain distinct`,{skip},async()=>{

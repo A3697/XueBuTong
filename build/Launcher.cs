@@ -10,8 +10,8 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("学不通")]
 [assembly: AssemblyProduct("学不通")]
-[assembly: AssemblyVersion("2.5.13.0")]
-[assembly: AssemblyFileVersion("2.5.13.0")]
+[assembly: AssemblyVersion("2.5.14.0")]
+[assembly: AssemblyFileVersion("2.5.14.0")]
 internal static class Launcher
 {
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr handle);

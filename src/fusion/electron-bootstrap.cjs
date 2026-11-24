@@ -224,21 +224,13 @@ const handlers={
  start:async(input)=>{
   if(!controller.getSettings(input).starEligible)throw Error('星蝉仅支持学习通账号，请先选择超星登录方式并填写账号密码。');
   const result=await modes.start(input),runtime=controller.runtimes.get(input.uid),prefs=workspacePreferences.get();
-  if(runtime?.loggedIn&&runtime.enhanced!==false&&prefs.speeds[input.uid]!==undefined)await controller.request(runtime,'PUT','/api/integration/playback',{beisu:prefs.speeds[input.uid]});
-  if(runtime?.loggedIn&&prefs.launchPlans[input.uid]?.autoRunStar&&!runtime.autoRunApplied){
-   runtime.autoRunApplied=true;
-   if(runtime.enhanced===false){controller.appendLog(input.uid,'INFO','原生模式的课程与执行设置由原生面板管理，请在控制面板中开始任务。');return result;}
-   const deadline=Date.now()+30000;let progress;
-   do{progress=await controller.request(runtime,'GET','/api/integration/monitor-progress');if(progress.queue.restore_ready)break;await new Promise(resolve=>setTimeout(resolve,250));}while(Date.now()<deadline);
-   if(progress?.queue.restore_ready&&progress.queue.course_total>0){await starMonitor.action({uid:input.uid,action:'start'});controller.appendLog(input.uid,'INFO','已按账号设置自动开始保存的课程队列。');}
-   else controller.appendLog(input.uid,'INFO',progress?.queue.course_total?'课程列表尚未恢复就绪，本次未自动开始。':'已启用自动刷课，但课程列表为空，本次未开始。');
-  }
+  await require('./star-startup.cjs').applyStarStartup({uid:input.uid,controller,starMonitor,preferences:prefs});
   return result;
  },stop:input=>modes.stop(input),claimBrowser:input=>modes.claimBrowser(input),releaseBrowser:input=>modes.releaseBrowser(input),
  getWorkspacePreferences:()=>workspacePreferences.get(),saveWorkspacePreferences:input=>workspacePreferences.set(input),
  exportConfig:async(input,event)=>{
   await Promise.all([...windows.entries()].map(([uid,win])=>saveNativePanel(uid,win)));
-  const snapshot=getTransfer().snapshot(input.ocs);
+  const snapshot=getTransfer().snapshot(input.ocs,input.accountUids);
   const result=await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender),{title:'导出完整配置',defaultPath:'学不通配置_'+(()=>{const d=new Date();return String(d.getFullYear()).slice(-2)+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');})()+'.ocsdata',filters:[{name:'学不通 / OCS 配置',extensions:['ocsdata']}]});
   if(result.canceled||!result.filePath)return {saved:false};
   const file=/\.ocsdata$/i.test(result.filePath)?result.filePath:result.filePath+'.ocsdata';

@@ -13,7 +13,14 @@ class SoutijiangPool{
  }
  get sessions(){return this.engine.sessions;}
  get pending(){return this.engine.pending;}
- definition(uid){validUid(uid);if(!Object.hasOwn(this.controller.data.profiles,uid))throw Error('学不通账号不存在');return Accounts.normalize(this.controller.data.profiles[uid].soutijiangAccounts);}
+ definition(uid){
+  validUid(uid);if(!Object.hasOwn(this.controller.data.profiles,uid))throw Error('学不通账号不存在');
+  const value=this.controller.data.profiles[uid].soutijiangAccounts;
+  // Preserve an actual pre-multi-account login, without inventing a blank
+  // account for every new learning account or imported configuration.
+  if(value===undefined&&fs.existsSync(this.profile(uid,'default'))&&(this.engine.bindings[uid]?.configured||stateIdentity(this.saved[uid]?.default)))return Accounts.normalize({items:[{id:'default',remark:'',enabled:true}]});
+  return Accounts.normalize(value);
+ }
  binding(uid,id){return id==='default'?uid:uid+'.'+id;}
  profile(uid,id){validUid(uid);Accounts.normalize({items:[{id,remark:''}]});return id==='default'?path.join(this.engine.home,uid,'profile'):path.join(this.engine.home,uid,'accounts',id,'profile');}
  saveDefinition(uid,definition){
@@ -53,7 +60,7 @@ class SoutijiangPool{
  preferred(uid){return this.bankPreferred(uid)||this.definition(uid).items[0]?.id;}
  browserAccount(uid){const definition=this.definition(uid),current=this.browserIds.get(uid);return definition.selectedId||(definition.items.some(item=>item.id===current)?current:this.preferred(uid));}
  configured(uid){return this.rows(uid).some(row=>row.enabled&&row.configured);}
- view(uid,id){const accounts=this.rows(uid),selectedId=id||this.browserAccount(uid),row=accounts.find(item=>item.id===selectedId);const ext=this.engine.extension();
+ view(uid,id){const accounts=this.rows(uid).filter(row=>row.configured||row.loggedIn),selectedId=id||this.browserAccount(uid),row=accounts.find(item=>item.id===selectedId);const ext=this.engine.extension();
   const state=this.current.get(uid)===selectedId?this.engine.view(uid):{};
   const connectionKey=crypto.createHash('sha256').update(JSON.stringify(accounts.filter(row=>row.enabled).map(row=>[uid,row.id,row.configured,this.saved[uid]?.[row.id]?.providerUid]))).digest('hex');
   return {...state,uid,enabled:this.engine.enabled(uid),configured:this.configured(uid),installed:ext.installed,version:ext.version,compatible:ext.compatible,loggedIn:row?.loggedIn===true,name:row?.name||'',accounts,connectionKey,selectedId:selectedId||'',browserAccountId:this.browserAccount(uid)||'',browserAccountExplicit:this.definition(uid).selectedId!==undefined,usageNote:'仅统计本机经题库入口成功完成的搜题请求；不等同于官方扣减次数，不含插件自行搜题和其他设备用量。官方未提供可靠的已用／剩余额度数值。'};
@@ -68,7 +75,8 @@ class SoutijiangPool{
  async change(uid,{action,id,remark,order,enabled}={}){return this.lock(uid,async()=>{
   const definition=this.definition(uid),item=definition.items.find(item=>item.id===id);
   if(action==='add'){
-   id=crypto.randomBytes(12).toString('hex');definition.items.push({id,remark:typeof remark==='string'?remark:''});
+   const pending=this.rows(uid).find(row=>row.id!=='default'&&!row.configured&&!stateIdentity(this.saved[uid]?.[row.id]));
+   id=pending?.id||crypto.randomBytes(12).toString('hex');if(!pending)definition.items.push({id,remark:typeof remark==='string'?remark:''});
   }else if(action==='rename'){if(!item)throw Error('搜题酱账号不存在');item.remark=remark;}
   else if(action==='set-enabled'){
    if(!item)throw Error('搜题酱账号不存在');if(typeof enabled!=='boolean')throw Error('搜题酱账号的题库开关无效');item.enabled=enabled;
@@ -81,8 +89,9 @@ class SoutijiangPool{
    }
   }
   else if(action==='reorder'){
-   if(!Array.isArray(order)||order.length!==definition.items.length||new Set(order).size!==order.length||order.some(id=>!definition.items.some(item=>item.id===id)))throw Error('账号顺序无效');
-   definition.items=order.map(id=>definition.items.find(item=>item.id===id));
+   const visible=this.rows(uid).filter(row=>row.configured||row.loggedIn).map(row=>row.id);
+   if(!Array.isArray(order)||new Set(order).size!==order.length||order.some(id=>!definition.items.some(item=>item.id===id))||order.length!==definition.items.length&&(order.length!==visible.length||visible.some(id=>!order.includes(id))))throw Error('账号顺序无效');
+   definition.items=[...order.map(id=>definition.items.find(item=>item.id===id)),...definition.items.filter(item=>!order.includes(item.id))];
   }else if(action==='remove'){
    if(!item)throw Error('搜题酱账号不存在');
    await this.use(uid,id,()=>this.engine.stop(uid));
@@ -148,6 +157,25 @@ class SoutijiangPool{
   if(definition.items.length>=Accounts.MAX_ACCOUNTS)throw Error('搜题酱账号已达上限，请先整理账号，现有登录未覆盖');
   const id=crypto.randomBytes(12).toString('hex');definition.items.push({id,remark:'浏览器已有登录'});this.saveDefinition(uid,definition);await this.adopt(uid,id,snapshot);this.forgetRemoved(uid,identity);return id;
  }
+ async browserQuota(token,input){
+  const ticket=typeof token==='string'?this.tickets.get(token):null;if(!ticket)throw Error('搜题酱登录共享授权无效');
+  return this.lock(ticket.uid,async()=>{
+   const uid=ticket.uid,event=input?.quota,id=this.browserAccount(uid),state=this.saved[uid]?.[id];
+   if(this.tickets.get(token)!==ticket||input.revision!==ticket.revision||ticket.slotId!==id||!state?.providerUid||event?.identity!==stateIdentity(state))return {rotated:false,reason:'stale'};
+   if(!['solve','screenshot'].includes(event.method)||!Number.isInteger(event.error)||Core.classifyError(event)!=='quota')return {rotated:false,reason:'not-quota'};
+   this.engine.markIdentityQuota(state.providerUid,event.method);
+   const rows=this.rows(uid),index=rows.findIndex(row=>row.id===id),ordered=[...rows.slice(index+1),...rows.slice(0,index)];
+   const next=ordered.find(row=>row.configured&&!row.blocked&&!row[event.method+'Exhausted']&&stateIdentity(this.saved[uid]?.[row.id])!==event.identity);
+   if(!next)return {rotated:false,reason:'exhausted',message:'当前搜题酱额度已耗尽，没有其他可用登录账号；今日暂停此类搜题。'};
+   // Only an explicit quota response permits rotation. Verify one candidate;
+   // login/verification/network errors never trigger attempts at further users.
+   try{await this.use(uid,next.id,()=>this.engine.probe(uid));}
+   catch{return {rotated:false,reason:'unavailable',message:'下一搜题酱账号无法验证登录，已暂停轮换，请检查该账号。'};}
+   if(!this.engine.view(uid).loggedIn)return {rotated:false,reason:'login',message:'下一搜题酱账号登录已失效，已暂停轮换，请重新扫码。'};
+   ticket.pendingRotation={from:id,to:next.id,identity:event.identity};
+   return {rotated:true,reason:'quota',message:'搜题酱额度已耗尽，已切换到下一可用账号；网页现有作答内容已保留。'};
+  });
+ }
  async exchange(token,input){
   const ticket=typeof token==='string'?this.tickets.get(token):null;if(!ticket)throw Error('搜题酱登录共享授权无效');
   const snapshot=Auth.normalize(input?.snapshot),browserDigest=Auth.digest(snapshot),inputLoginDigest=Auth.loginDigest(snapshot),uid=ticket.uid;
@@ -165,6 +193,13 @@ class SoutijiangPool{
    if(removed&&!canImport&&(first||!rejectedCredentials.length))this.rememberRemovedCredential(uid,identity,inputLoginDigest);
    const finish=(id,saved)=>{ticket.revision++;ticket.initialized=true;ticket.slotId=id;ticket.browserDigest=Auth.digest(saved);ticket.bankDigest=Auth.loginDigest(saved);ticket.inputLoginDigest=inputLoginDigest;return {revision:ticket.revision,slotId:id,snapshot:browserDigest===ticket.browserDigest?null:saved};};
    let id=this.browserAccount(uid);
+   const rotation=ticket.pendingRotation;delete ticket.pendingRotation;
+   // A new manual scan or selection during quota checking wins. Commit the
+   // next login only when the browser still holds the exhausted identity.
+   if(rotation&&id===rotation.from&&identity===rotation.identity&&input.revision===ticket.revision){
+    const definition=this.definition(uid);
+    if(definition.items.some(item=>item.id===rotation.to)){definition.selectedId=rotation.to;this.saveDefinition(uid,definition);this.browserIds.set(uid,rotation.to);id=rotation.to;}
+   }
    if(!id&&Auth.user(snapshot).loggedIn&&canImport&&(first||input.revision===ticket.revision))id=await this.preserveBrowser(uid,snapshot);
    if(!id)return finish('',{schema:1,storage:{},cookies:[]});
    await this.use(uid,id,()=>this.engine.ensure(uid));let session=this.engine.sessions.get(uid),saved=await session.readAuth();
