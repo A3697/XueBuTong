@@ -4,7 +4,7 @@
  function mount(host,{uid,bridge,enabled}){
   let active=true,visible=false,busy=false,state=null,selectedId='',timer,child;
   const label=el('label','fusion-provider-switch'),toggle=el('input','fusion-answer-switch');toggle.type='checkbox';toggle.setAttribute('role','switch');toggle.setAttribute('aria-label','接管大学搜题酱');toggle.checked=enabled===true;
-  label.append(toggle,el('span','','接管大学搜题酱'));label.title='仅控制作为题库使用，不影响脚本选择。按账号顺序使用；明确额度耗尽才切换，验证、限流和登录失效会暂停并提示。';
+  label.append(toggle,el('span','','接管大学搜题酱'));label.title='仅控制作为题库使用，不影响脚本选择。额度耗尽或账号异常时立即使用下一可用账号，没有可用账号则继续下一搜题方式。异常提醒不阻塞任务；重新登录成功后恢复该账号。';
   const heading=el('div','fusion-souti-heading'),title=el('strong','','搜题酱账号'),list=el('div','fusion-souti-accounts'),status=el('p','xc-poc-note','正在读取登录状态…'),qr=el('img','fusion-soutijiang-qr'),tools=el('div','fusion-provider-actions');
   status.setAttribute('role','status');list.setAttribute('aria-label','搜题酱账号使用顺序');qr.alt='大学搜题酱官方登录二维码';qr.hidden=true;
   title.title='每个学不通账号独立管理。账号、备注、顺序、独立题库开关及登录操作立即保存；接管总开关点击外层“确定”后保存。每份登录凭据由插件与题库共用。';
@@ -36,7 +36,7 @@
    if(!active)return;const data=state||{},ready=data.installed&&data.compatible,rows=data.accounts||[];
    list.replaceChildren();for(const [index,row]of rows.entries()){
     const card=el('article','fusion-souti-account'+(row.id===selectedId?' is-selected':'')),main=el('div','fusion-souti-account-main'),name=el('strong','',`${index+1}. ${row.remark||row.name||'未登录账号'}`);
-    const detail=el('span','fusion-souti-detail',(row.name&&row.remark?row.name+' · ':'')+(row.blocked?'需要处理验证':row.loggedIn?'已登录':row.configured?'已保存登录':'未登录')+(row.id===data.browserAccountId?' · 插件当前登录':''));
+    const detail=el('span','fusion-souti-detail',(row.name&&row.remark?row.name+' · ':'')+(row.attention?(row.attention.state==='pending'?'异常已跳过，等待处理':'已暂时跳过，请重新登录'):row.blocked?'需要处理验证':row.loggedIn?'已登录':row.configured?'已保存登录':'未登录')+(row.id===data.browserAccountId?' · 插件当前登录':''));
     const usage=el('span','fusion-souti-usage',`本机今日成功搜题：截图 ${row.screenshotUsed} 次 · 自动答题 ${row.solveUsed} 次`);usage.title=data.usageNote||'统计本机题库调用，不代表官方扣减次数。';
     const quota=el('span','fusion-souti-detail',row.screenshotExhausted&&row.solveExhausted?'官方确认：今日额度已耗尽':row.screenshotExhausted?'官方确认：截图额度已耗尽':row.solveExhausted?'官方确认：自动答题额度已耗尽':'官方已用／剩余额度：未提供');
     main.append(name,detail,usage,quota);const controls=el('div','fusion-souti-row-actions');
@@ -48,7 +48,8 @@
    if(state&&!rows.length)list.append(el('p','xc-poc-note',selectedId?'尚未登录搜题酱，完成扫码后账号会显示在此处。':'尚未登录搜题酱，点击“添加账号”后扫码登录。'));
    status.textContent=!state?'正在读取登录状态…':!data.installed?'请先安装大学搜题酱官方扩展。':!data.compatible?'当前扩展版本尚未验证，暂不接管。':data.message||(data.loggedIn?'当前查看：'+(data.name||'已登录账号'):'选择账号后恢复登录或获取二维码。');
    const image=typeof data.qrDataUrl==='string'&&/^data:image\/png;base64,/.test(data.qrDataUrl)?data.qrDataUrl:'';qr.hidden=!image||data.loggedIn;if(image)qr.src=image;else qr.removeAttribute('src');
-   add.disabled=busy||rows.length>=20;install.hidden=!!data.installed;install.disabled=busy;login.hidden=open.hidden=data.loggedIn===true;login.disabled=open.disabled=busy||!ready||!selectedId;refresh.disabled=busy||!ready||!selectedId;logout.hidden=!data.loggedIn;logout.disabled=busy;
+   const needsLogin=rows.find(row=>row.id===selectedId)?.attention||data.blocked;
+   add.disabled=busy||rows.length>=20;install.hidden=!!data.installed;install.disabled=busy;login.hidden=open.hidden=data.loggedIn===true&&!needsLogin;login.disabled=open.disabled=busy||!ready||!selectedId;refresh.disabled=busy||!ready||!selectedId;logout.hidden=!data.loggedIn;logout.disabled=busy;
   }
   async function load(connect=false){await action(()=>bridge.getSoutijiangState({uid,slotId:selectedId||undefined,refresh:true,connect}));}
   render();return {get enabled(){return toggle.checked;},setVisible(value){visible=value;clearTimeout(timer);if(visible)void load();},dispose(){active=false;clearTimeout(timer);child?.close();}};
@@ -58,7 +59,7 @@
   const select=el('select','xc-poc-input'),status=el('span','fusion-souti-selector-status'),label=el('label','fusion-souti-selector-label');
   select.setAttribute('aria-label','搜题酱插件登录账号');select.disabled=true;status.setAttribute('role','status');
   label.append(el('span','','搜题酱插件登录账号'),select);host.append(label,status);
-  host.title='与题库配置共用账号列表及每份登录凭据。手动选择设置插件当前登录；官方明确提示该类搜题额度耗尽后，按列表顺序切换到下一可用登录。登录失效、验证或限流时不轮换。题库只使用开启“用于题库”的账号，不影响插件轮换。保存后数秒内同步至已启动浏览器。';
+  host.title='与题库配置共用账号列表及每份登录凭据。手动选择设置插件当前登录；额度耗尽或账号异常后，按列表顺序切换到下一可用登录。异常账号在重新登录成功前不再使用，提醒不阻塞后台任务。题库只使用开启“用于题库”的账号，不影响插件轮换。保存后数秒内同步至已启动浏览器。';
   const active=()=>alive&&isActive();
   function render(){
    if(!active())return;const rows=state?.accounts||[],signature=JSON.stringify(rows.map(row=>[row.id,row.remark,row.name,row.configured]));

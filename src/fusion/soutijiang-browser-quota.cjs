@@ -9,14 +9,14 @@ function methodFor(url){
   if(u.pathname==='/dxkits/aisearch/pc/askstream')return 'sse';
  }catch{}return null;
 }
-function quotaResult(method,text){
+function quotaResult(method,text,includeAttention=false){
  if(typeof text!=='string'||text.length>1048576)return null;
  const values=[];
  if(method==='sse'){
   for(const block of text.split(/\r?\n\r?\n/)){const data=block.split(/\r?\n/).filter(line=>line.startsWith('data:')).map(line=>line.slice(5).trimStart()).join('\n');if(data)try{values.push(JSON.parse(data));}catch{}}
  }else try{values.push(JSON.parse(text));}catch{}
  for(const value of values){const result={error:value?.errNo,message:String(value?.errstr||value?.data?.errstr||'').slice(0,500),method:method==='solve'?'solve':'screenshot',...(method==='sse'?{protocol:'sse'}:{})};
-  if(Number.isInteger(result.error)&&result.error!==0&&classifyError(result)==='quota')return result;
+  if(Number.isInteger(result.error)&&result.error!==0&&['quota',...(includeAttention?['login','blocked']:[])].includes(classifyError(result)))return result;
  }return null;
 }
 function watch(context,{identity,onQuota}){
@@ -27,7 +27,7 @@ function watch(context,{identity,onQuota}){
   if(owner.startsWith(PREFIX))observed.set(request,{method,identity:identity()});
  };
  const response=response=>{const entry=observed.get(response.request());if(!entry?.identity||stopped)return;
-  void (async()=>{const headers=await response.allHeaders();if(Number(headers['content-length'])>1048576)return;const result=quotaResult(entry.method,await response.text());if(!stopped&&result)await onQuota({...result,identity:entry.identity});})().catch(()=>{});
+  void (async()=>{const headers=await response.allHeaders();if(Number(headers['content-length'])>1048576)return;const result=quotaResult(entry.method,await response.text(),true);if(!stopped&&result)await onQuota({...result,identity:entry.identity});})().catch(()=>{});
  };
  context.on('request',request);context.on('response',response);
  return {dispose(){stopped=true;context.off('request',request);context.off('response',response);}};

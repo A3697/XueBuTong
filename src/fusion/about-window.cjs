@@ -16,9 +16,10 @@ function installAbout({root,app,BrowserWindow,ipcMain,shell,dialog,directNetwork
   return{version:metadata.version,dependencies:metadata.dependencies,installerSha256:sha,xingchanLinkStatus:links.xingchanLinkStatus||'',projectUrl:PROJECT_URL};
  });
  ipcMain.handle('xuebutong-about:open',async(event,kind)=>{
-  if(!allowed(event)||!['ocs','xingchan','product','github','releases',...Object.keys(CHANNEL_LINKS)].includes(kind))throw Error('页面入口未授权');
+  if(!allowed(event)||!['ocs','xingchan','product','github','releases','quark-download',...Object.keys(CHANNEL_LINKS)].includes(kind))throw Error('页面入口未授权');
   if(kind==='product'){window.show();window.focus();return true;}
   if(kind==='github'||kind==='releases'){await shell.openExternal(PROJECT_URL+(kind==='releases'?'/releases':''));return true;}
+  if(kind==='quark-download'){await shell.openExternal('https://pan.quark.cn/s/6de4b34e2712');return true;}
   if(Object.hasOwn(CHANNEL_LINKS,kind)){await shell.openExternal(CHANNEL_LINKS[kind]);return true;}
   if(kind==='xingchan'){await dialog.showMessageBox(window,{type:'info',title:'星蝉刷课',message:'暂无官网',buttons:['知道了']});return true;}
   const links=JSON.parse(fs.readFileSync(path.join(root,'assets/product-links.json'),'utf8')),url=new URL(links[kind]);
@@ -31,7 +32,7 @@ function installAbout({root,app,BrowserWindow,ipcMain,shell,dialog,directNetwork
   if(action==='download')return updates.download();
   if(action!=='install')throw Error('更新操作无效');
   if(!canUpdate())throw Error('请先停止正在运行或启动中的账号，再安装更新。');
-  const answer=await dialog.showMessageBox(window,{type:'question',title:'安装学不通更新',message:'保存配置、退出学不通并安装更新？',detail:'更新器仅替换程序文件，保留账号、登录数据及本机星蝉组件。',buttons:['取消','退出并安装'],defaultId:0,cancelId:0});
+  const answer=await dialog.showMessageBox(window,{type:'question',title:'安装学不通更新',message:'保存配置、退出学不通并安装更新？',detail:'保留账号、登录数据和使用设置；完整安装包会同时更新随包运行组件。',buttons:['取消','退出并安装'],defaultId:0,cancelId:0});
   if(answer.response!==1)return updates.snapshot();
   if(!canUpdate())throw Error('账号正在运行，请先停止后重试。');
   const info=await updates.verifiedPackage();

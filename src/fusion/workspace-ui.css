@@ -85,6 +85,10 @@ body[arco-theme='dark'] .fusion-task-failed{background:#57283a;color:#ffbdd0}bod
 .fusion-launch-section-title{margin:18px 0 9px;font-size:15px;font-weight:600}.fusion-global-video-settings{padding:14px 16px;margin:16px 0 20px;border:1px solid var(--color-border-2,#586272);border-radius:9px;background:var(--color-fill-1,#303640)}.fusion-global-video-settings>.fusion-launch-section-title{margin:0 0 10px}.fusion-global-video-toggle{display:flex;align-items:center;gap:8px;width:fit-content;max-width:100%;cursor:pointer;font-size:14px}.fusion-global-video-toggle input{flex:none;accent-color:#3485f0;width:17px;height:17px;margin:0}.fusion-global-video-settings>.fusion-launch-settings-note{margin:8px 0 0;font-size:12px}.fusion-global-video-toggle:focus-within{outline:2px solid #5892f6;outline-offset:5px;border-radius:3px}
 
 /* Retain native OCS navigation and its 142/56px icon layout. */
+body .bp-toc{color:#374151;background:#fff}
+body .bp-toc>div:hover{color:#172033;background:#e7edf5}
+body[arco-theme=dark] .bp-toc{color:#e5e7eb;background:#292929}
+body[arco-theme=dark] .bp-toc>div:hover{color:#fff;background:#434a56}
 #app .sider.fusion-sidebar-nav{display:flex;flex-direction:column;align-items:stretch;padding:4px 0 0;width:100%;max-width:100%;box-sizing:border-box}
 #app .fusion-sidebar-nav .sider-items{width:100%!important;min-height:0;max-height:calc(100% - 77px);flex:1 1 auto!important;padding-top:5px;overflow-x:hidden}
 .fusion-sidebar-toggle{display:flex;align-items:center;justify-content:center;gap:5px;flex:none;height:32px;margin:3px 7px 2px;padding:0 5px;border:1px solid var(--color-border-2,#dbe2ec);border-radius:6px;background:var(--color-fill-1,#f1f5fa);color:var(--color-text-2,#4b5b70);font:12px/1.2 'Microsoft YaHei',sans-serif;cursor:pointer;white-space:nowrap;-webkit-app-region:no-drag}

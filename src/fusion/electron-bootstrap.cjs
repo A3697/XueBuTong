@@ -81,7 +81,17 @@ controller.resolveSchool=login=>verifier.resolveSchool(login);
 const {BrowserCacheRemoval}=require(path.join(lab,'src/browser-cache-removal.cjs'));const browserCacheRemoval=new BrowserCacheRemoval({userData:app.getPath('userData')});
 const {ConnectionChecks}=require(path.join(lab,'src/connection-checks.cjs'));const connectionChecks=new ConnectionChecks(controller);
 const {ApplicationSettings}=require(path.join(lab,'src/application-settings.cjs'));const applicationSettings=new ApplicationSettings(lab);
-const soutijiang=require(path.join(lab,'src/soutijiang-pool.cjs')).createPool({root:lab,controller});controller.soutijiang=soutijiang;require(path.join(lab,'src/soutijiang-broker.cjs')).install(soutijiang);
+const soutijiang=require(path.join(lab,'src/soutijiang-pool.cjs')).createPool({root:lab,controller,onAttention:()=>soutiNotice()});controller.soutijiang=soutijiang;require(path.join(lab,'src/soutijiang-broker.cjs')).install(soutijiang);
+function soutiAttentionSnapshot(){
+ const names=new Map(),visit=node=>{if(!node||typeof node!=='object')return;if(node.uid)names.set(node.uid,node.name);for(const child of Object.values(node.children||{}))visit(child);};
+ visit(require('./lib/src/store').getDecryptedRenderData().browser?.root);
+ return {items:soutijiang.attention.snapshot().items.flatMap(item=>{
+  if(!Object.hasOwn(controller.data.profiles,item.uid))return [];
+  const row=soutijiang.rows(item.uid).find(x=>x.id===item.slotId);if(!row)return [];
+  return [{...item,accountName:names.get(item.uid)||controller.data.profiles[item.uid]?.displayName||item.uid,providerName:row.remark||row.name||'搜题酱账号'}];
+ })};
+}
+const soutiNotice=require(path.join(lab,'src/soutijiang-attention-window.cjs')).createPresenter({root:lab,findMain:sessionGuardMain,getSnapshot:soutiAttentionSnapshot});
 const stopSoutijiangHelpers=()=>Promise.all([...new Set([...soutijiang.sessions.keys(),...soutijiang.pending.keys(),...[...soutijiang.parked.keys()].map(key=>key.split('\0')[0])])].map(uid=>soutijiang.stop(uid)));
 const {DefaultComponents}=require(path.join(lab,'src/default-components.cjs'));const defaultComponents=new DefaultComponents({root:lab,downloadRoot:()=>require('./lib/src/store').store.store.paths.downloadFolder,applications:applicationSettings});
 require(path.join(lab,'src/theme.cjs')).installTheme({ipcMain,nativeTheme,isSender:event=>isLabSender(event)});
@@ -146,7 +156,7 @@ controller.onOpenHtml=async({uid,url,mode})=>{
 controller.onCloseHtml=async({uid})=>closePanel(uid);
 const allowed=['reportSessionDisplacement','acknowledgeSessionGuard','getInitializationStatus','getDefaultSetupState','finishDefaultSetupPrompt','installDefaultComponents','getSettings','saveSettings','syncNativeLogin','recordBrowserName','verifyLogin','listStatus','start','stop','openHtml','getLogs','claimBrowser','releaseBrowser','prepareBrowserCacheRemoval','restoreBrowserCacheRemoval','finishBrowserCacheRemoval','getWorkspacePreferences','saveWorkspacePreferences','exportConfig','importConfig','cloneAccountSettings','removeAccountSettings','getStarMonitor','starTaskAction','confirmClose','finishClose','openAbout','getConnectionChecks','checkConnections','getApplicationStates','changeApplicationState','installSoutijiang','removeSoutijiang','clearLogs','takeStartupLaunchPlan','setPlayback','copyQuestionBank','getQuestionBankConfiguration','importQuestionBanks','removeQuestionBank','listAiModels'];
 allowed.push('getAccountOcsRuntime','getOcsPlugins','changeOcsPlugins','checkOcsUpdate','reportOcsConflict');
-allowed.push('getSoutijiangState','loginSoutijiang','logoutSoutijiang','changeSoutijiangAccounts');
+allowed.push('getSoutijiangState','loginSoutijiang','logoutSoutijiang','changeSoutijiangAccounts','getSoutijiangAttention','skipSoutijiangAttention');
 allowed.push('importDeviceProfile');
 const ocsPlugins=require(path.join(lab,'src/ocs-plugin-manager.cjs')).manager(lab);
 const pluginAction=async(method,input)=>{
@@ -166,7 +176,9 @@ controller.browserScriptAvailability=uid=>BrowserScripts.state({selected:control
 const handlers={
  reportSessionDisplacement:input=>sessionGuard.reportBrowser(input),
  acknowledgeSessionGuard:({revision})=>sessionGuard.acknowledge(revision),
- getSoutijiangState:async({uid,slotId,refresh=false,connect=false})=>{const before=soutijiang.view(uid).connectionKey,state=await soutijiang.state(uid,{slotId,refresh:refresh===true,connect:connect===true});if(before!==state.connectionKey)connectionChecks.invalidate(uid,'soutijiang');return state;},
+ getSoutijiangState:async({uid,slotId,refresh=false,connect=false,summaryOnly=false})=>{const before=soutijiang.view(uid).connectionKey,state=await soutijiang.state(uid,{slotId,refresh:refresh===true,connect:connect===true,summaryOnly:summaryOnly===true});if(before!==state.connectionKey)connectionChecks.invalidate(uid,'soutijiang');return state;},
+ getSoutijiangAttention:()=>soutiAttentionSnapshot(),
+ skipSoutijiangAttention:({uid,slotId})=>{if(!soutijiang.definition(uid).items.some(x=>x.id===slotId))throw Error('搜题酱账号不存在');return soutijiang.attention.skip(uid,slotId);},
  loginSoutijiang:async({uid,slotId,visible=false})=>{const state=await soutijiang.login(uid,{slotId,visible:visible===true});connectionChecks.invalidate(uid,'soutijiang');return state;},
  logoutSoutijiang:async({uid,slotId})=>{const state=await soutijiang.logout(uid,{slotId});connectionChecks.invalidate(uid,'soutijiang');return state;},
  changeSoutijiangAccounts:async({uid,...input})=>{const before=soutijiang.view(uid).connectionKey,state=await soutijiang.change(uid,input);if(before!==state.connectionKey)connectionChecks.invalidate(uid,'soutijiang');return state;},
@@ -223,8 +235,8 @@ const handlers={
  cloneAccountSettings:async input=>{await saveNativePanel(input.sourceUid,windows.get(input.sourceUid));return accountSettings.clone(input);},removeAccountSettings:async input=>{if(modes.current(input.uid))throw Error('请先停止此账号的任务，再删除账号。');await soutijiang.stop(input.uid);return accountSettings.remove(input);},
  start:async(input)=>{
   if(!controller.getSettings(input).starEligible)throw Error('星蝉仅支持学习通账号，请先选择超星登录方式并填写账号密码。');
-  const result=await modes.start(input),runtime=controller.runtimes.get(input.uid),prefs=workspacePreferences.get();
-  await require('./star-startup.cjs').applyStarStartup({uid:input.uid,controller,starMonitor,preferences:prefs});
+  const result=await modes.start(input);
+  void require(path.join(lab,'src/star-startup.cjs')).applyStarStartup({uid:input.uid,controller,starMonitor,getPreferences:()=>workspacePreferences.get()});
   return result;
  },stop:input=>modes.stop(input),claimBrowser:input=>modes.claimBrowser(input),releaseBrowser:input=>modes.releaseBrowser(input),
  getWorkspacePreferences:()=>workspacePreferences.get(),saveWorkspacePreferences:input=>workspacePreferences.set(input),
@@ -334,6 +346,7 @@ app.on('web-contents-created',(_event,contents)=>{
     await contents.executeJavaScript(`document.title='学不通';document.documentElement.dataset.xingchanFusion='true';`);
     mainInitialized=true;
     sessionGuard.publish();
+    void soutiNotice();
   });
 });
 app.on('before-quit',event=>{if(quitting)return;event.preventDefault();const main=BrowserWindow.getAllWindows().find(win=>!win.isDestroyed()&&win.webContents.getURL().startsWith(publicRootUrl));if(main){trayLifecycle.exit();return;}if(!modes.anyActive())handlers.finishClose();});

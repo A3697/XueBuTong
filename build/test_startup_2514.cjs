@@ -4,8 +4,8 @@ const {applyStarStartup}=require('../src/fusion/star-startup.cjs');
 const {model}=require('../src/fusion/ocs-ui/renderer.js');
 function fixture({native=false,queue=[0],auto=false}={}){
  const calls=[],r={loggedIn:true,enhanced:!native,abort:new AbortController()},runtimes=new Map([['A',r]]);
- const controller={runtimes,request:async(_r,method,url,body)=>{calls.push(url);return url==='/api/queue'?{items:queue}:{queue:{restore_ready:true,course_total:queue.length}};},openHtml:async()=>calls.push('panel'),appendLog(){}};
- const options={uid:'A',controller,starMonitor:{action:async()=>calls.push('run')},preferences:{speeds:{},launchPlans:{A:{autoRunStar:auto}}}};
+ const controller={runtimes,request:async(_r,method,url,body)=>{calls.push(url);return url==='/api/queue'?{items:queue}:url==='/api/run'?{running:false}:{queue:{restore_ready:true,course_total:queue.length}};},openHtml:async()=>calls.push('panel'),appendLog(){}};
+ const options={uid:'A',controller,starMonitor:{action:async()=>calls.push('run')},preferences:{speeds:{},launchPlans:{A:{autoRunStar:auto}}},sleep:async()=>{}};
  return {calls,r,options};
 }
 for(const native of [false,true])test('confirmed empty '+(native?'native':'enhanced')+' queue opens panel only once',async()=>{const f=fixture({native,queue:[]});await Promise.all([applyStarStartup(f.options),applyStarStartup(f.options)]);assert.equal(f.calls.filter(x=>x==='panel').length,1);assert(!f.calls.includes('run'));});

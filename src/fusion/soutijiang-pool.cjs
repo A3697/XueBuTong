@@ -10,6 +10,7 @@ class SoutijiangPool{
   if(!this.saved||typeof this.saved!=='object'||Array.isArray(this.saved))throw Error('搜题酱账号状态无法读取，请保留原文件后检查');
   this.engine.profileFor=uid=>this.profile(uid,this.current.get(uid)||'default');
   this.engine.bindingKeyFor=uid=>this.binding(uid,this.current.get(uid)||'default');
+  this.attention=new (require('./soutijiang-attention.cjs').SoutijiangAttention)({home:this.engine.home,clock:this.engine.clock,notify:options.onAttention});
  }
  get sessions(){return this.engine.sessions;}
  get pending(){return this.engine.pending;}
@@ -49,18 +50,23 @@ class SoutijiangPool{
    if(waiting&&!waiting.session.closed?.()){this.engine.sessions.set(uid,waiting.session);this.engine.states.set(uid,waiting.state);}
    else this.engine.states.set(uid,{...(this.saved[uid]?.[id]||{})});
   }
-  try{return await fn();}finally{this.retain(uid);}
+  try{return await fn();}finally{
+   this.retain(uid);
+   const state=this.engine.states.get(uid);
+   if(state?.loggedIn===true&&!state.blocked&&state.status==='ready')this.attention.recovered(uid,id);
+  }
  }
  rows(uid){return this.definition(uid).items.map((item,index)=>{
   const live=this.current.get(uid)===item.id?this.engine.states.get(uid):null,state=live||this.saved[uid]?.[item.id]||{},quota=this.engine.quotas[state.providerUid],today=quota?.day===Core.dayKey(this.engine.clock())?quota:{};
   const configured=this.engine.bindings[this.binding(uid,item.id)]?.configured===true&&fs.existsSync(this.profile(uid,item.id));
-  return {...item,order:index+1,name:state.name||'',configured,loggedIn:live?.loggedIn===true,blocked:state.blocked===true,message:state.message||'',screenshotExhausted:today.screenshot===true,solveExhausted:today.solve===true,screenshotUsed:today.screenshotSuccessful||0,solveUsed:today.solveSuccessful||0,usageSource:'local-successful-requests',officialUsed:null};
+  const attention=this.attention.find(uid,item.id);
+  return {...item,order:index+1,name:state.name||'',configured,loggedIn:live?.loggedIn===true,blocked:state.blocked===true,message:state.message||'',attention:attention?{state:attention.state,deadline:attention.deadline}:null,screenshotExhausted:today.screenshot===true,solveExhausted:today.solve===true,screenshotUsed:today.screenshotSuccessful||0,solveUsed:today.solveSuccessful||0,usageSource:'local-successful-requests',officialUsed:null};
  });}
- bankPreferred(uid){const rows=this.rows(uid).filter(row=>row.enabled);return rows.find(row=>!(row.screenshotExhausted&&row.solveExhausted))?.id||rows[0]?.id;}
+ bankPreferred(uid){const rows=this.rows(uid).filter(row=>row.enabled&&!row.attention);return rows.find(row=>!(row.screenshotExhausted&&row.solveExhausted))?.id||rows[0]?.id;}
  preferred(uid){return this.bankPreferred(uid)||this.definition(uid).items[0]?.id;}
  browserAccount(uid){const definition=this.definition(uid),current=this.browserIds.get(uid);return definition.selectedId||(definition.items.some(item=>item.id===current)?current:this.preferred(uid));}
  configured(uid){return this.rows(uid).some(row=>row.enabled&&row.configured);}
- view(uid,id){const accounts=this.rows(uid).filter(row=>row.configured||row.loggedIn),selectedId=id||this.browserAccount(uid),row=accounts.find(item=>item.id===selectedId);const ext=this.engine.extension();
+ view(uid,id){this.attention.expire();const accounts=this.rows(uid).filter(row=>row.configured||row.loggedIn||row.attention),selectedId=id||this.browserAccount(uid),row=accounts.find(item=>item.id===selectedId);const ext=this.engine.extension();
   const state=this.current.get(uid)===selectedId?this.engine.view(uid):{};
   const connectionKey=crypto.createHash('sha256').update(JSON.stringify(accounts.filter(row=>row.enabled).map(row=>[uid,row.id,row.configured,this.saved[uid]?.[row.id]?.providerUid]))).digest('hex');
   return {...state,uid,enabled:this.engine.enabled(uid),configured:this.configured(uid),installed:ext.installed,version:ext.version,compatible:ext.compatible,loggedIn:row?.loggedIn===true,name:row?.name||'',accounts,connectionKey,selectedId:selectedId||'',browserAccountId:this.browserAccount(uid)||'',browserAccountExplicit:this.definition(uid).selectedId!==undefined,usageNote:'仅统计本机经题库入口成功完成的搜题请求；不等同于官方扣减次数，不含插件自行搜题和其他设备用量。官方未提供可靠的已用／剩余额度数值。'};
@@ -70,7 +76,37 @@ class SoutijiangPool{
   const id=slotId||(forBank?this.bankPreferred(uid):this.browserAccount(uid));if(!id)return this.view(uid);
   await this.use(uid,id,()=>this.engine.state(uid,{refresh,connect}));return this.view(uid,id);
  });}
- async login(uid,{slotId,visible=false}={}){return this.lock(uid,async()=>{const id=slotId||this.preferred(uid);if(!id)throw Error('请先添加搜题酱账号');await this.use(uid,id,()=>this.engine.login(uid,{visible}));return this.view(uid,id);});}
+ async login(uid,{slotId,visible=false}={}){return this.lock(uid,async()=>{
+  const id=slotId||this.preferred(uid);if(!id)throw Error('请先添加搜题酱账号');
+  await this.use(uid,id,async()=>{
+   if(this.attention.find(uid,id)){
+    // A cached nickname/token is not a successful re-login. Explicit recovery
+    // opens the official login flow, rather than clearing a blocked flag.
+    const session=await this.engine.ensure(uid);
+    if((await session.user()).loggedIn)await this.engine.logout(uid);
+    this.attention.beginRecovery(uid,id);
+   }
+   const result=await this.engine.login(uid,{visible});
+   if(this.attention.find(uid,id))this.engine.states.set(uid,{...this.engine.states.get(uid),browserImportBlocked:true});
+   return result;
+  });this.watchRecovery();return this.view(uid,id);
+ });}
+ watchRecovery(){
+  if(this.recoveryTimer||this.closed||!this.attention.recovering.size)return;
+  this.recoveryTimer=setTimeout(()=>{this.recoveryTimer=null;void this.refreshRecoveries().catch(()=>{}).finally(()=>this.watchRecovery());},2000);this.recoveryTimer.unref?.();
+ }
+ async refreshRecoveries(){
+  for(const key of [...this.attention.recovering]){
+   if(this.closed)return;const [uid,id]=key.split('\0');
+   const session=this.current.get(uid)===id?this.engine.sessions.get(uid):this.parked.get(key)?.session;
+   if(!Object.hasOwn(this.controller.data.profiles,uid)||!session||session.closed?.()){this.attention.recovering.delete(key);continue;}
+   // Read the official login window locally; don't switch the healthy search
+   // session or make probe requests while the user is still scanning.
+   try{const user=await session.user();if(!user.loggedIn)continue;
+    await this.lock(uid,()=>this.use(uid,id,()=>this.engine.state(uid,{refresh:true})));
+   }catch{/* A closed login window must not prevent another account recovering. */}
+  }
+ }
  async logout(uid,{slotId}={}){return this.lock(uid,async()=>{const id=slotId||this.preferred(uid);await this.use(uid,id,async()=>{await this.engine.logout(uid);this.engine.states.set(uid,{...this.engine.states.get(uid),browserImportBlocked:true});});return this.view(uid,id);});}
  async change(uid,{action,id,remark,order,enabled}={}){return this.lock(uid,async()=>{
   const definition=this.definition(uid),item=definition.items.find(item=>item.id===id);
@@ -89,7 +125,7 @@ class SoutijiangPool{
    }
   }
   else if(action==='reorder'){
-   const visible=this.rows(uid).filter(row=>row.configured||row.loggedIn).map(row=>row.id);
+   const visible=this.rows(uid).filter(row=>row.configured||row.loggedIn||row.attention).map(row=>row.id);
    if(!Array.isArray(order)||new Set(order).size!==order.length||order.some(id=>!definition.items.some(item=>item.id===id))||order.length!==definition.items.length&&(order.length!==visible.length||visible.some(id=>!order.includes(id))))throw Error('账号顺序无效');
    definition.items=[...order.map(id=>definition.items.find(item=>item.id===id)),...definition.items.filter(item=>!order.includes(item.id))];
   }else if(action==='remove'){
@@ -121,6 +157,7 @@ class SoutijiangPool{
     throw error;
    }
    this.current.delete(uid);
+   this.attention.remove(uid,id);
    if(exists)fs.rmSync(staged,{recursive:true,force:false,maxRetries:3,retryDelay:100});
   }else throw Error('搜题酱账号操作无效');
   if(action!=='remove')this.saveDefinition(uid,definition);if(action==='reorder'||action==='remove'||action==='select'&&id==='')this.browserIds.delete(uid);
@@ -134,13 +171,22 @@ class SoutijiangPool{
    if(!this.engine.enabled(uid))throw new Core.SoutijiangError('soutijiang_disabled','该账号未启用搜题酱题库',409);
    const definition=this.definition(uid),items=definition.items.filter(item=>item.enabled);if(!definition.items.length)throw new Core.SoutijiangError('soutijiang_login_required','请先添加并登录搜题酱账号',409);
    if(!items.length)throw new Core.SoutijiangError('soutijiang_accounts_disabled','请在题库配置中启用至少一个搜题酱账号',409);
+   let unavailable=false;
    for(const item of items){
     if(this.closed||(this.cancellations.get(uid)||0)!==generation)throw new Core.SoutijiangError('soutijiang_cancelled','搜题酱请求已取消',409);
+    if(this.attention.find(uid,item.id)){unavailable=true;continue;}
     try{return await this.use(uid,item.id,async()=>{if(!definition.selectedId)this.browserIds.set(uid,item.id);const answer=await this.engine.query(uid,question);if(this.closed||(this.cancellations.get(uid)||0)!==generation)throw new Core.SoutijiangError('soutijiang_cancelled','搜题酱请求已取消',409);return answer;});}
-    catch(error){if(error.code!=='soutijiang_daily_exhausted')throw error;}
+    catch(error){if(error.code==='soutijiang_daily_exhausted')continue;if(this.markAttention(uid,item.id,error.code)){unavailable=true;continue;}throw error;}
    }
+   if(unavailable)throw new Core.SoutijiangError('soutijiang_accounts_unavailable','搜题酱账号需要处理，已跳过并继续其他搜题方式',409);
    throw new Core.SoutijiangError('soutijiang_daily_exhausted','全部搜题酱账号今日额度已明确耗尽，今日跳过此方式',429);
   });this.pendingQueries.set(key,run);run.finally(()=>this.pendingQueries.delete(key)).catch(()=>{});return run;
+ }
+ markAttention(uid,id,code){
+  if(!this.attention.mark(uid,id,code))return false;
+  const identity=stateIdentity(this.saved[uid]?.[id]);
+  if(identity)for(const item of this.definition(uid).items)if(item.id!==id&&stateIdentity(this.saved[uid]?.[item.id])===identity)this.attention.mark(uid,item.id,code);
+  return true;
  }
  ticket(uid){validUid(uid);for(const [key,value]of this.tickets)if(value.uid===uid)this.tickets.delete(key);const token=crypto.randomBytes(32).toString('hex');this.tickets.set(token,{uid,revision:0,slotId:'',browserDigest:'',bankDigest:'',initialized:false,inputLoginDigest:''});return {token};}
  removedIdentities(uid){return Array.isArray(this.saved[uid]?._removedIdentities)?this.saved[uid]._removedIdentities.filter(value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value)):[];}
@@ -150,7 +196,17 @@ class SoutijiangPool{
   this.saved[uid]._removedCredentials={...this.saved[uid]._removedCredentials,[identity]:[...previous,digest]};this.persistState();
  }
  forgetRemoved(uid,identity){if(!this.removedIdentities(uid).includes(identity))return;this.saved[uid]._removedIdentities=this.removedIdentities(uid).filter(value=>value!==identity);delete this.saved[uid]._removedCredentials?.[identity];this.persistState();}
- async adopt(uid,id,snapshot){return this.use(uid,id,async()=>{const session=await this.engine.ensure(uid);await session.applyAuth(snapshot);this.engine.states.set(uid,{...this.engine.states.get(uid),browserImportBlocked:!Auth.user(snapshot).loggedIn});return this.engine.state(uid,{refresh:true});});}
+ async adopt(uid,id,snapshot){return this.use(uid,id,async()=>{
+  const session=await this.engine.ensure(uid),previous=await session.readAuth();
+  const freshLogin=Auth.user(snapshot).loggedIn&&Auth.loginDigest(previous)!==Auth.loginDigest(snapshot);
+  await session.applyAuth(snapshot);
+  if(freshLogin&&this.attention.find(uid,id)){
+   this.attention.beginRecovery(uid,id);
+   this.engine.states.set(uid,{...this.engine.states.get(uid),blocked:false,status:'awaiting-login'});
+  }
+  this.engine.states.set(uid,{...this.engine.states.get(uid),browserImportBlocked:!Auth.user(snapshot).loggedIn});
+  return this.engine.state(uid,{refresh:true});
+ });}
  async preserveBrowser(uid,snapshot){
   const definition=this.definition(uid),identity=Auth.identity(snapshot);if(!identity)return null;
   const known=definition.items.find(item=>stateIdentity(this.saved[uid]?.[item.id])===identity);if(known){await this.adopt(uid,known.id,snapshot);this.forgetRemoved(uid,identity);return known.id;}
@@ -162,18 +218,20 @@ class SoutijiangPool{
   return this.lock(ticket.uid,async()=>{
    const uid=ticket.uid,event=input?.quota,id=this.browserAccount(uid),state=this.saved[uid]?.[id];
    if(this.tickets.get(token)!==ticket||input.revision!==ticket.revision||ticket.slotId!==id||!state?.providerUid||event?.identity!==stateIdentity(state))return {rotated:false,reason:'stale'};
-   if(!['solve','screenshot'].includes(event.method)||!Number.isInteger(event.error)||Core.classifyError(event)!=='quota')return {rotated:false,reason:'not-quota'};
-   this.engine.markIdentityQuota(state.providerUid,event.method);
+   const reason=Core.classifyError(event);
+   if(!['solve','screenshot'].includes(event.method)||!Number.isInteger(event.error)||!['quota','login','blocked'].includes(reason))return {rotated:false,reason:'not-quota'};
+   if(reason==='quota')this.engine.markIdentityQuota(state.providerUid,event.method);
+   else this.markAttention(uid,id,reason==='login'?'soutijiang_login_required':'soutijiang_verification_required');
    const rows=this.rows(uid),index=rows.findIndex(row=>row.id===id),ordered=[...rows.slice(index+1),...rows.slice(0,index)];
-   const next=ordered.find(row=>row.configured&&!row.blocked&&!row[event.method+'Exhausted']&&stateIdentity(this.saved[uid]?.[row.id])!==event.identity);
-   if(!next)return {rotated:false,reason:'exhausted',message:'当前搜题酱额度已耗尽，没有其他可用登录账号；今日暂停此类搜题。'};
-   // Only an explicit quota response permits rotation. Verify one candidate;
-   // login/verification/network errors never trigger attempts at further users.
-   try{await this.use(uid,next.id,()=>this.engine.probe(uid));}
-   catch{return {rotated:false,reason:'unavailable',message:'下一搜题酱账号无法验证登录，已暂停轮换，请检查该账号。'};}
-   if(!this.engine.view(uid).loggedIn)return {rotated:false,reason:'login',message:'下一搜题酱账号登录已失效，已暂停轮换，请重新扫码。'};
-   ticket.pendingRotation={from:id,to:next.id,identity:event.identity};
-   return {rotated:true,reason:'quota',message:'搜题酱额度已耗尽，已切换到下一可用账号；网页现有作答内容已保留。'};
+   for(const next of ordered){
+    if(!next.configured||next.blocked||next.attention||next[event.method+'Exhausted']||stateIdentity(this.saved[uid]?.[next.id])===event.identity)continue;
+    try{await this.use(uid,next.id,()=>this.engine.probe(uid));}
+    catch{this.markAttention(uid,next.id,'soutijiang_session_unavailable');continue;}
+    if(!this.engine.view(uid).loggedIn){this.markAttention(uid,next.id,'soutijiang_login_required');continue;}
+    ticket.pendingRotation={from:id,to:next.id,identity:event.identity};
+    return {rotated:true,reason,message:'当前搜题酱账号已跳过，已切换到下一可用登录；网页现有作答内容已保留。'};
+   }
+   return {rotated:false,reason:reason==='quota'?'exhausted':'unavailable',message:'搜题酱没有其他可用登录账号；异常提醒不阻塞后台任务，请处理登录后恢复此方式。'};
   });
  }
  async exchange(token,input){
@@ -221,6 +279,6 @@ class SoutijiangPool{
   });
  }
  async stop(uid){validUid(uid);this.cancellations.set(uid,(this.cancellations.get(uid)||0)+1);this.retain(uid);await this.engine.stop(uid);for(const [key,value]of this.parked)if(key.startsWith(uid+'\0')){this.parked.delete(key);await value.session.close().catch(()=>{});}}
- async dispose(){this.closed=true;this.tickets.clear();await this.engine.dispose();await Promise.allSettled([...this.parked.values()].map(value=>value.session.close()));this.parked.clear();await Promise.allSettled([...this.locks.values()]);}
+ async dispose(){this.closed=true;clearTimeout(this.recoveryTimer);this.attention.dispose();this.tickets.clear();await this.engine.dispose();await Promise.allSettled([...this.parked.values()].map(value=>value.session.close()));this.parked.clear();await Promise.allSettled([...this.locks.values()]);}
 }
 module.exports={SoutijiangPool,createPool:options=>new SoutijiangPool(options)};

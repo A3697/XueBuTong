@@ -13,7 +13,7 @@ function renderUpdate(state){
 async function update(action){
  check.disabled=true;download.disabled=true;install.disabled=true;
  if(action==='download'){message.textContent='正在下载更新…';polling=setInterval(()=>window.aboutApi.update('state').then(renderUpdate).catch(()=>{}),500);}
- try{renderUpdate(await window.aboutApi.update(action));}catch(error){clearInterval(polling);polling=null;message.textContent=String(error.message||'更新未完成，请稍后重试。').replace(/^Error invoking remote method '[^']+': Error: /,'');check.disabled=false;}
+ try{renderUpdate(await window.aboutApi.update(action));}catch(error){clearInterval(polling);polling=null;renderUpdate({status:'error',message:String(error.message||'更新未完成，请稍后重试。').replace(/^Error invoking remote method '[^']+': Error: /,'')});}
  finally{download.disabled=false;install.disabled=false;}
 }
 check.addEventListener('click',()=>update('check'));download.addEventListener('click',()=>update('download'));install.addEventListener('click',()=>update('install'));

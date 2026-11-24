@@ -7,6 +7,9 @@ class StarMonitor {
  state(r){return r.monitor??={queue:[],run:{},live:new Map(),details:new Map(),revision:0,received:false,lastLocalRead:0,visit:{state:'idle'},pending:null};}
  observe(r,event){
   const s=this.state(r),p=event.payload||{};let changed=true;
+  if(['waiting','starting'].includes(r.startupSetup?.state)&&
+    (event.type==='integration.recovery-cancel'||event.type==='integration.risk-blocked'||
+     r.startupSetup.state==='waiting'&&event.type==='run.state'&&(p.running||p.paused||p.stopping)))r.startupSetup.cancel();
   if(event.type==='snapshot'){const items=queueItems(p.queue);if(items!==null){s.queue=items;s.received=true;}else s.received=false;s.run=p.run||{};}
   else if(event.type==='queue.changed'){const items=queueItems(p);if(items!==null)s.queue=items;else s.received=false;s.details.clear();s.live.clear();}
   else if(event.type==='queue.item'){if(Number.isInteger(p.index)){
@@ -52,8 +55,9 @@ class StarMonitor {
   }
   return {uid,enhanced:r.enhanced!==false,revision:s.revision,queue:s.queue,run:s.run,queueIndex:index,...detail,progress:s.progress||null,live:[...s.live.values()].filter(t=>t.queue_index===index),visit:s.visit};
  }
- async action({uid,action,queueIndex}){
+ async action({uid,action,queueIndex},automatic){
   const r=this.runtime(uid),s=this.state(r);
+  if(!automatic&&['start','pause','resume','stop'].includes(action))r.startupSetup?.cancel();
   if(action==='visitEmpty'){
    if(s.visit.state==='running')return {accepted:true,alreadyRunning:true};
    const snapshot=await this.snapshot({uid,queueIndex});if(snapshot.queueIndex<0)throw Error('此账号队列为空，请先在控制面板添加课程。');
@@ -71,6 +75,7 @@ class StarMonitor {
    let body;if(action==='start'){
     body=r.enhanced===false?await this.controller.getNativeRunOptions(uid):await this.controller.request(r,'GET','/api/integration/run-options');
    }
+   if(automatic&&(!automatic.current()||r.startupSetup!==automatic.startup))return {accepted:false,cancelled:true};
    await this.controller.request(r,'POST','/api/run/'+action,body,30000);
    s.run=await this.controller.request(r,'GET','/api/run');s.revision++;return {accepted:true,run:s.run};
   }finally{s.command=false;}

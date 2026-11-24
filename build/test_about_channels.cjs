@@ -31,6 +31,12 @@ test('about external links reject arbitrary URLs, unrelated senders and subframe
  assert.deepEqual(f.opened,[]);
 });
 
+test('backup download opens only the user-provided Quark share',async()=>{
+ const f=fixture();await f.show();await f.open('quark-download');
+ assert.deepEqual(f.opened,['https://pan.quark.cn/s/6de4b34e2712']);
+ await assert.rejects(f.open('https://pan.quark.cn/s/another-share'),/未授权/);
+});
+
 test('adding Star channel does not reclassify it as an official website',async()=>{
  const f=fixture();await f.show();
  await f.open('xingchan');

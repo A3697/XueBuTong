@@ -265,7 +265,10 @@ end;
     report = {'version': version, 'passed': True, 'closedComponentsIncluded': bool(component),
               'requiresExistingInstall': True, 'package': package.name, 'sha256': digest(package),
               'size': package.stat().st_size, 'files': changed,
-              'removedFiles': [old[name] for name in sorted(removed)]}
+              'removedFiles': [old[name] for name in sorted(removed)],
+              'compatibleBase': {'version': json.loads(baseline.read_text('utf-8-sig'))['version'],
+                                 'metadataSha256': old['fusion-install.json']['sha256'],
+                                 'backendManifestSha256': old[BACKEND_MANIFEST]['sha256']}}
     if component:
         report['starRuntimeDelta'] = {key: component[key] for key in ('fromVersion', 'toVersion', 'baselineManifestSha256', 'candidateManifestSha256')}
         report['starRuntimeDelta']['reviewSha256'] = digest(Path(delta_path))

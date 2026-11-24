@@ -11,7 +11,7 @@ function officialAddress(value){
 }
 function getBytes(url,limit,redirects=0){return new Promise((resolve,reject)=>{
  let address;try{address=officialAddress(url);}catch(error){reject(error);return;}
- const request=https.get(address,{agent:false,headers:{'User-Agent':'XueBuTong/2.5.14','Accept-Encoding':'identity'}},response=>{
+ const request=https.get(address,{agent:false,headers:{'User-Agent':'XueBuTong/2.5.15','Accept-Encoding':'identity'}},response=>{
   if([301,302,303,307,308].includes(response.statusCode)){
    response.resume();if(redirects>=3||!response.headers.location){reject(Error('官方下载重定向异常'));return;}
    let next;try{next=new URL(response.headers.location,address);}catch(_){reject(Error('官方下载地址无效'));return;}

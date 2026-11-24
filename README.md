@@ -13,6 +13,8 @@ Windows 多账号学习任务管理工具，整合 OCS 网课助手与星蝉刷�
 
 [下载最新版完整安装包](https://github.com/A3697/XueBuTong/releases/latest) · [版本更新记录](https://github.com/A3697/XueBuTong/releases) · [构建说明](docs/源码与构建说明.md)
 
+[GitHub 更新失败时可从夸克网盘下载](https://pan.quark.cn/s/6de4b34e2712)；夸克内链接：`/~276d3cV3XP~:/`。
+
 OCS 官网：[docs.ocsjs.com](https://docs.ocsjs.com/)
 
 OCS 开源地址：[ocsjs/ocsjs](https://github.com/ocsjs/ocsjs)

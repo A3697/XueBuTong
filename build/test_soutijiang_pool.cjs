@@ -35,15 +35,16 @@ test('browser solve quota rotates even a manually selected login, independent of
  assert.equal((await f.pool.browserQuota(ticket.token,{revision:shared.revision,quota})).reason,'stale');assert.equal(f.pool.browserAccount('A'),next);
  const last=await f.pool.browserQuota(ticket.token,{revision:shared.revision,quota:{...quota,identity:Auth.identity(login('two'))}});assert.equal(last.reason,'exhausted');assert.equal(f.pool.browserAccount('A'),next);
 });
-test('browser verification, limits and stale responses cannot rotate accounts',async t=>{
+test('generic browser network errors and stale responses cannot rotate accounts',async t=>{
  const f=fixture(t);f.seed('A','default','one');await f.add('A','two');const ticket=f.pool.ticket('A'),first=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:0});
- for(const quota of [{method:'solve',error:410004,message:'请验证'},{method:'solve',error:303,message:'登录失效'},{method:'screenshot',error:500,message:'请求过于频繁'},{method:'solve',error:500,message:'网络异常'}]){assert.equal((await f.pool.browserQuota(ticket.token,{revision:first.revision,quota:{...quota,identity:Auth.identity(login('one'))}})).rotated,false);assert.equal(f.pool.browserAccount('A'),'default');}
+ for(const quota of [{method:'solve',error:500,message:'网络异常'},{method:'screenshot',error:502,message:'服务不可用'}]){assert.equal((await f.pool.browserQuota(ticket.token,{revision:first.revision,quota:{...quota,identity:Auth.identity(login('one'))}})).rotated,false);assert.equal(f.pool.browserAccount('A'),'default');}
  assert.equal((await f.pool.browserQuota(ticket.token,{revision:first.revision-1,quota:{identity:Auth.identity(login('one')),method:'solve',error:4002}})).reason,'stale');assert.equal(f.pool.rows('A')[0].solveExhausted,false);
 });
-test('browser rotation stops at an invalid next login instead of trying more identities',async t=>{
+test('browser rotation skips an invalid next login and immediately selects the following login',async t=>{
  const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const next=await f.add('A','two');await f.add('A','three');f.auth.set(f.pool.profile('A',next),empty());
  const ticket=f.pool.ticket('A'),first=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:0});
- assert.equal((await f.pool.browserQuota(ticket.token,{revision:first.revision,quota:{identity:Auth.identity(login('one')),method:'solve',error:4002}})).reason,'login');assert.equal(f.pool.browserAccount('A'),'default');assert.equal(f.calls.length,0);
+ const rotated=await f.pool.browserQuota(ticket.token,{revision:first.revision,quota:{identity:Auth.identity(login('one')),method:'solve',error:4002}});assert.equal(rotated.rotated,true);assert.equal(f.calls.length,0);assert.equal(f.pool.attention.find('A',next).state,'pending');
+ const result=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:first.revision});assert.equal(Auth.user(result.snapshot).providerUid,'three');
 });
 test('a fresh manual login during quota checking wins over pending rotation',async t=>{
  const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});await f.add('A','two');
@@ -85,9 +86,10 @@ test('both explicit quota limits advance to the next account, in user order',asy
  await f.pool.query('A',{...question,title:'二加一等于多少？'});assert.equal(f.calls.filter(x=>x.id==='one').length,2);
  f.setNow(Date.parse('2026-11-22T16:00:01Z'));await f.pool.query('A',question);assert.equal(f.calls.at(-1).id,'one');assert.equal(f.pool.view('A').accounts[0].screenshotUsed,1);
 });
-for(const [label,response,code]of [['verification',{message:{errNo:410004}},'soutijiang_verification_required'],['login',{message:{errNo:303}},'soutijiang_login_required'],['network',Error('network'),'soutijiang_request_failed']])test(label+' never advances to another login',async t=>{
- const f=fixture(t);f.seed('A','default','one');await f.add('A','two');f.replies.set('one',[response]);await assert.rejects(f.pool.query('A',question),error=>error.code===code);assert.equal(f.calls.length,1);assert.equal(f.calls[0].id,'one');assert.equal(f.pool.view('A').accounts[0].screenshotUsed,0);
+for(const [label,response,code]of [['verification',{message:{errNo:410004}},'soutijiang_verification_required'],['login',{message:{errNo:303}},'soutijiang_login_required']])test(label+' immediately advances while one nonblocking reminder stays pending',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.add('A','two');f.replies.set('one',[response]);assert.equal((await f.pool.query('A',question)).answer,'A');assert.deepEqual(f.calls.map(x=>x.id),['one','two']);assert.equal(f.pool.view('A').accounts[0].screenshotUsed,0);assert.equal(f.pool.attention.find('A','default').code,code);
 });
+test('a transient network error leaves the provider available for a later question',async t=>{const f=fixture(t);f.seed('A','default','one');await f.add('A','two');f.replies.set('one',[Error('network')]);await assert.rejects(f.pool.query('A',question),error=>error.code==='soutijiang_request_failed');assert.equal(f.pool.attention.items.length,0);assert.deepEqual(f.calls.map(x=>x.id),['one']);});
 test('clear no-answer does not spend the next provider account quota',async t=>{const f=fixture(t);f.seed('A','default','one');await f.add('A','two');f.replies.set('one',[{message:{errNo:0,list:[]}}]);assert.deepEqual(await f.pool.query('A',question),{kind:'miss',explicitMiss:true});assert.equal(f.calls.length,1);});
 test('same official login shares quota accounting across local records',async t=>{const f=fixture(t);f.seed('A','default','same');await f.add('A','same');await f.pool.query('A',question);assert.deepEqual(f.pool.view('A').accounts.map(x=>x.screenshotUsed),[1,1]);});
 test('repeated concurrent requests share one official query',async t=>{const f=fixture(t);f.seed('A','default','one');const results=await Promise.all([f.pool.query('A',question),f.pool.query('A',question)]);assert.deepEqual(results[0],results[1]);assert.equal(f.calls.length,1);});
@@ -318,9 +320,9 @@ test('bank connection selection ignores a disabled manual plugin account and doe
  const state=await f.pool.state('A',{refresh:true,connect:true,forBank:true});assert.equal(state.selectedId,second);assert.equal(state.loggedIn,true);assert.equal(state.browserAccountId,'default');assert.equal(f.calls.length,0);
 });
 
-test('disabled accounts are not fallback targets and verification still stops the enabled chain',async t=>{
+test('disabled accounts are not fallback targets and verification immediately advances the enabled chain',async t=>{
  const f=fixture(t);f.seed('A','default','one');await f.add('A','two');const third=await f.add('A','three');await f.pool.change('A',{action:'set-enabled',id:'default',enabled:false});
- f.replies.set('two',[{message:{errNo:410004}}]);await assert.rejects(f.pool.query('A',question),error=>error.code==='soutijiang_verification_required');assert.deepEqual(f.calls.map(row=>row.id),['two']);assert.equal(f.pool.view('A').accounts.find(row=>row.id===third).screenshotUsed,0);
+ f.replies.set('two',[{message:{errNo:410004}}]);assert.equal((await f.pool.query('A',question)).answer,'A');assert.deepEqual(f.calls.map(row=>row.id),['two','three']);assert.equal(f.pool.view('A').accounts.find(row=>row.id===third).screenshotUsed,1);
 });
 
 test('bank connection identity changes for switches but not manual plugin choice or remarks',async t=>{
@@ -339,4 +341,48 @@ test('manual selection waits for an active query and survives its late completio
  const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const second=await f.add('A','two');let resolve,started;const began=new Promise(done=>{started=done;});f.replies.set('one',[()=>{started();return new Promise(done=>{resolve=done;});}]);
  const query=f.pool.query('A',question);await began;let selected=false;const selection=f.pool.change('A',{action:'select',id:second}).then(value=>{selected=true;return value;});await new Promise(done=>setImmediate(done));assert.equal(selected,false);resolve(hit);await query;await selection;
  assert.equal(f.pool.definition('A').selectedId,second);assert.equal(f.pool.view('A').browserAccountId,second);assert.deepEqual(f.calls.map(row=>row.id),['one']);
+});
+
+for(const event of [{method:'solve',error:410004,message:'请验证'},{method:'solve',error:303,message:'登录失效'},{method:'screenshot',error:500,message:'请求过于频繁'}])test('browser account issue '+event.error+' schedules one reminder and changes login without a page reload',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.add('A','two');const ticket=f.pool.ticket('A'),first=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:0});
+ const result=await f.pool.browserQuota(ticket.token,{revision:first.revision,quota:{...event,identity:Auth.identity(login('one'))}});assert.equal(result.rotated,true);assert.equal(f.pool.attention.snapshot().items.length,1);assert.equal(f.pool.rows('A')[0].solveExhausted,false);
+ const changed=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:first.revision});assert.equal(Auth.user(changed.snapshot).providerUid,'two');assert.equal(f.calls.length,0);
+});
+
+test('no next usable account fails immediately, stays skipped across restart and does not become an explicit miss',async t=>{
+ const f=fixture(t);f.seed('A','default','one');f.replies.set('one',[{message:{errNo:303}}]);
+ await assert.rejects(f.pool.query('A',question),e=>e.code==='soutijiang_accounts_unavailable');const first=f.pool.attention.find('A','default');assert.equal(first.state,'pending');assert.equal(f.calls.length,1);
+ // The ten minutes control reminder lifetime only. No request is made while pending.
+ await assert.rejects(f.pool.query('A',{...question,title:'next question'}),e=>e.code==='soutijiang_accounts_unavailable');assert.equal(f.calls.length,1);assert.equal(f.pool.attention.find('A','default').deadline,first.deadline);
+ f.setNow(first.deadline-1);assert.equal(f.pool.attention.snapshot().items.length,1);f.setNow(first.deadline);assert.equal(f.pool.attention.snapshot().items.length,0);assert.equal(first.state,'skipped');
+ const reload=f.reload();assert.equal(reload.attention.find('A','default').state,'skipped');await assert.rejects(reload.query('A',question),e=>e.code==='soutijiang_accounts_unavailable');assert.equal(f.calls.length,1);
+});
+
+test('account probe and old browser heartbeats cannot clear the skip; a successful official re-login can',async t=>{
+ const f=fixture(t);f.seed('A','default','one');f.replies.set('one',[{message:{errNo:410004}}]);await assert.rejects(f.pool.query('A',question));
+ await f.pool.state('A',{connect:true,refresh:true});assert(f.pool.attention.find('A','default'));const ticket=f.pool.ticket('A');const shared=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:0});assert(f.pool.attention.find('A','default'));
+ await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:shared.revision});assert(f.pool.attention.find('A','default'));
+ const waiting=await f.pool.login('A',{slotId:'default',visible:true});assert.equal(waiting.loggedIn,false);assert.equal(waiting.phase,'awaiting-login');assert(f.pool.attention.find('A','default'));
+ f.seed('A','default','one');await f.pool.refreshRecoveries();assert.equal(f.pool.attention.find('A','default'),undefined);assert.equal((await f.pool.query('A',question)).answer,'A');
+});
+
+test('fresh same-identity browser credentials recover a skipped login, but nickname refresh does not',async t=>{
+ const f=fixture(t);f.seed('A','default','one');const ticket=f.pool.ticket('A'),first=await f.pool.exchange(ticket.token,{snapshot:login('one'),revision:0});f.replies.set('one',[{message:{errNo:410004}}]);await assert.rejects(f.pool.query('A',question));
+ const renamed=login('one');renamed.storage.college_ai_userInfo=JSON.stringify({uid:'one',nickname:'renamed'});const next=await f.pool.exchange(ticket.token,{snapshot:renamed,revision:first.revision});assert(f.pool.attention.find('A','default'));
+ const fresh=login('one');fresh.storage.college_ai_dxuss='"new-official-login"';fresh.cookies[0].value='new-official-login';await f.pool.exchange(ticket.token,{snapshot:fresh,revision:next.revision});assert.equal(f.pool.attention.find('A','default'),undefined);assert.equal((await f.pool.query('A',question)).answer,'A');
+});
+
+test('duplicate saved identities are not retried when one login requires attention',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.pool.state('A',{connect:true});const duplicate=await f.add('A','one');await f.add('A','two');f.replies.set('one',[{message:{errNo:410004}}]);assert.equal((await f.pool.query('A',question)).answer,'A');assert.deepEqual(f.calls.map(x=>x.id),['one','two']);assert(f.pool.attention.find('A',duplicate));
+});
+
+test('an unanswered prompt does not lock another learning account or the next question',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.add('A','two');f.seed('B','default','other-owner');f.replies.set('one',[{message:{errNo:303}}]);
+ const results=await Promise.all([f.pool.query('A',question),f.pool.query('B',question)]);assert(results.every(x=>x.kind==='hit'));assert.equal(f.pool.attention.snapshot().items.length,1);const count=f.calls.filter(x=>x.id==='one').length;
+ await f.pool.query('A',{...question,title:'second question'});assert.equal(f.calls.filter(x=>x.id==='one').length,count);assert.equal(f.pool.attention.snapshot().items.length,1);
+});
+
+test('explicitly dismissing or removing a prompt never resumes a still-invalid login',async t=>{
+ const f=fixture(t);f.seed('A','default','one');await f.add('A','two');f.replies.set('one',[{message:{errNo:303}}]);await f.pool.query('A',question);f.pool.attention.skip('A','default');assert.equal(f.pool.attention.snapshot().items.length,0);await f.pool.query('A',question);assert.equal(f.calls.filter(x=>x.id==='one').length,1);
+ await f.pool.change('A',{action:'remove',id:'default'});assert.equal(f.pool.attention.items.length,0);
 });

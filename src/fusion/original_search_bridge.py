@@ -113,8 +113,10 @@ class _ObservedSession:
     Tests inject a fake Session via OriginalSearchService(session_factory=...).
     Production uses requests.Session and the original banks' endpoints/payloads.
     """
-    def __init__(self, underlying):
+    def __init__(self, underlying, *, judgement=False):
         self.underlying = underlying
+        self.judgement = judgement
+        self.judgement_response = None
         self.responses = []
         self.failure = None
 
@@ -122,6 +124,8 @@ class _ObservedSession:
         return getattr(self.underlying, name)
 
     def request(self, method, url, **kwargs):
+        if self.judgement_response is not None:
+            return self.judgement_response
         try:
             response = self.underlying.request(method, url, **kwargs)
         except Exception as exc:
@@ -150,6 +154,11 @@ class _ObservedSession:
         if body.get('error') not in (None, '', False, {}, []):
             self.failure = BridgeError('upstream_reported_error')
             raise self.failure
+        if self.judgement and _ai_judgement_value(body) is not _UNSET:
+            # The original judgment normalizer can reject even "对" with reversed
+            # displayed options. Its retry must not charge for the same valid
+            # answer again. This cache lives only for this single question.
+            self.judgement_response = response
         return response
 
     def post(self, url, **kwargs):
@@ -194,6 +203,19 @@ def _ai_answer_value(body):
 
 def _strict_ai_null(body):
     return _ai_answer_value(body) is None
+
+
+def _ai_judgement_value(body):
+    value = _ai_answer_value(body)
+    if type(value) is bool:
+        return '对' if value else '错'
+    if isinstance(value, str):
+        value = value.strip().lower()
+        if value in ('对', '正确', 'true', 't', '√', '是'):
+            return '对'
+        if value in ('错', '错误', 'false', 'f', '×', '否'):
+            return '错'
+    return _UNSET
 
 
 def _explicit_bank_miss(body):
@@ -263,7 +285,7 @@ class OriginalSearchService:
                             answer_num=config['blankCount'], course_name=config['courseName'],
                             extra={'fusion_study_prompt': source == 'ai', 'fusion_enrollment_year': config['enrollmentYear']})
         context = QueryContext(token=config['key'])
-        session = _ObservedSession((self.session_factory or Session)())
+        session = _ObservedSession((self.session_factory or Session)(), judgement=source == 'ai' and config['type'] == 'judgement')
         try:
             if source == 'ai':
                 ai = config['ai']
@@ -309,6 +331,12 @@ class OriginalSearchService:
             if ((source == 'original-bank' and _explicit_bank_miss(body))
                     or (source == 'ai' and (_strict_ai_null(body) or explicit_refusal(_ai_answer_value(body))))):
                 return {'kind': 'miss', 'explicitMiss': True}
+            # Honor a validated truth value independently of displayed option
+            # order, including interfaces returning JSON booleans.
+            if source == 'ai' and config['type'] == 'judgement':
+                value = _ai_judgement_value(body)
+                if value is not _UNSET:
+                    return {'kind': 'hit', 'answer': value}
             if getattr(result, 'success', None) is True and getattr(result, 'answer', None) is not None:
                 if source == 'ai' and explicit_refusal(getattr(result.answer, 'normalized', '') or getattr(result.answer, 'raw', '')):
                     return {'kind': 'miss', 'explicitMiss': True}

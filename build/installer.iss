@@ -3,8 +3,8 @@
 [Setup]
 AppId={{7C772933-217C-4D40-A8CF-D4E3BCF6B845}
 AppName={#ProductName}
-AppVersion=2.5.14
-AppVerName={#ProductName} 2.5.14
+AppVersion=2.5.15
+AppVerName={#ProductName} 2.5.15
 AppPublisher={#ProductName}
 DefaultDirName={code:GetDefaultInstallDir}
 UsePreviousAppDir=yes
@@ -17,7 +17,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0.17763
 WizardStyle=modern
 OutputDir=output
-OutputBaseFilename=XueBuTong-2.5.14-win-x64-setup
+OutputBaseFilename=XueBuTong-2.5.15-win-x64-setup
 Compression=zip/7
 LZMANumBlockThreads=1
 SolidCompression=no
@@ -26,15 +26,15 @@ CloseApplications=no
 RestartApplications=no
 UninstallDisplayIcon={app}\学不通.exe
 InfoBeforeFile=release-docs\使用说明.txt
-VersionInfoVersion=2.5.14.0
+VersionInfoVersion=2.5.15.0
 SetupIconFile=candidate\assets\fusion.ico
 VersionInfoDescription=学不通安装程序
 VersionInfoCompany={#ProductName}
 VersionInfoProductName={#ProductName}
-VersionInfoProductVersion=2.5.14.0
-VersionInfoProductTextVersion=2.5.14
-VersionInfoTextVersion=2.5.14
-VersionInfoOriginalFileName=XueBuTong-2.5.14-win-x64-setup.exe
+VersionInfoProductVersion=2.5.15.0
+VersionInfoProductTextVersion=2.5.15
+VersionInfoTextVersion=2.5.15
+VersionInfoOriginalFileName=XueBuTong-2.5.15-win-x64-setup.exe
 AllowNoIcons=yes
 [Languages]
 Name: "chinesesimp"; MessagesFile: "compiler:Default.isl,build-tools\ChineseSimplified.isl"
@@ -988,9 +988,9 @@ begin
       Break;
     end;
   if InstallerHash = '' then
-    Result := '{"schema":1,"version":"2.5.14","installerSha256":null,"sourceStatus":"unavailable"}'
+    Result := '{"schema":1,"version":"2.5.15","installerSha256":null,"sourceStatus":"unavailable"}'
   else
-    Result := '{"schema":1,"version":"2.5.14","installerSha256":"' + InstallerHash + '","sourceStatus":"recorded"}';
+    Result := '{"schema":1,"version":"2.5.15","installerSha256":"' + InstallerHash + '","sourceStatus":"recorded"}';
 end;
 
 procedure WriteInstallationProvenance;
